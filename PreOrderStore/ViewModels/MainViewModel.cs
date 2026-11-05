@@ -1,9 +1,9 @@
+using System.Collections.ObjectModel;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PreOrderStore.Domain;
 using PreOrderStore.Services;
-using System.Collections.ObjectModel;
-using System.Globalization;
 
 namespace PreOrderStore.ViewModels;
 
@@ -11,13 +11,16 @@ public partial class MainViewModel : ViewModelBase
 {
     private readonly StoreService _store;
     private readonly CatalogSyncService _sync;
+    private readonly AuthService _auth;
     private bool _isRefreshing;
+    private static readonly CultureInfo RuCulture = CultureInfo.GetCultureInfo("ru-RU");
 
     public ObservableCollection<Product> Products { get; } = [];
     public ObservableCollection<Product> FilteredProducts { get; } = [];
+    public ObservableCollection<CartItem> CartItems { get; } = [];
     public ObservableCollection<PreOrder> PreOrders { get; } = [];
     public ObservableCollection<string> Categories { get; } = ["Все категории"];
-    public IReadOnlyList<string> AvailabilityOptions { get; } = ["Любой статус", "Доступен", "Недоступен"];
+    public IReadOnlyList<string> AvailabilityOptions { get; } = ["Любой статус", "Предзаказ открыт", "Скоро"];
     public IReadOnlyList<string> SortOptions { get; } = ["Сначала ближайшие", "По названию", "Сначала дешевле", "Сначала дороже"];
 
     [ObservableProperty] private string _searchText = string.Empty;
@@ -25,36 +28,57 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private string _selectedAvailability = "Любой статус";
     [ObservableProperty] private string _selectedSort = "Сначала ближайшие";
     [ObservableProperty] private Product? _selectedProduct;
-    [ObservableProperty] private int _orderQuantity = 1;
     [ObservableProperty] private string _currentSection = "Каталог";
+    [ObservableProperty] private string _displayName = string.Empty;
+    [ObservableProperty] private string _email = string.Empty;
+    [ObservableProperty] private string _password = string.Empty;
+    [ObservableProperty] private string _passwordConfirmation = string.Empty;
     [ObservableProperty] private string _notice = "";
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _hasError;
+    [ObservableProperty] private bool _isRegisterMode;
     [ObservableProperty] private DateTime? _lastSyncUtc;
+    [ObservableProperty] private int _cartCount;
+    [ObservableProperty] private decimal _cartTotal;
 
-    public bool IsCatalogVisible => CurrentSection == "Каталог";
-    public bool IsOrdersVisible => CurrentSection == "Предзаказы";
+    public string CurrentUserName => _auth.Session.Customer?.DisplayName ?? string.Empty;
+    public bool IsAuthenticated => _auth.Session.IsSignedIn;
+    public bool IsAuthVisible => !IsAuthenticated;
+    public bool IsSignInPanel => IsAuthVisible && !IsRegisterMode;
+    public bool IsRegisterPanel => IsAuthVisible && IsRegisterMode;
+    public bool IsAppVisible => IsAuthenticated;
+    public bool IsCatalogVisible => IsAppVisible && CurrentSection == "Каталог";
+    public bool IsCartVisible => IsAppVisible && CurrentSection == "Корзина";
+    public bool IsOrdersVisible => IsAppVisible && CurrentSection == "Заказы";
+    public bool IsCatalogSelected => CurrentSection == "Каталог";
+    public bool IsCartSelected => CurrentSection == "Корзина";
+    public bool IsOrdersSelected => CurrentSection == "Заказы";
+    public string AuthTitle => IsRegisterMode ? "Создать аккаунт" : "С возвращением";
+    public string AuthButtonText => IsRegisterMode ? "Создать аккаунт" : "Войти";
+    public string AuthSwitchText => IsRegisterMode ? "Уже есть аккаунт? Войти" : "Впервые здесь? Создать аккаунт";
+    public bool HasNotice => !string.IsNullOrWhiteSpace(Notice);
     public bool HasProducts => FilteredProducts.Count > 0;
     public bool HasSelectedProduct => SelectedProduct is not null;
     public bool HasNoProducts => !HasProducts;
     public bool HasNoSelectedProduct => !HasSelectedProduct;
     public bool HasNoOrders => PreOrders.Count == 0;
+    public bool HasNoCartItems => CartItems.Count == 0;
+    public bool CanCheckout => CartItems.Count > 0 && !IsBusy;
+    public string CartTotalText => FormatMoney(CartTotal);
     public string LastSyncText => LastSyncUtc is null
-        ? "Каталог ещё не обновлялся"
-        : $"Обновлено {LastSyncUtc.Value.ToLocalTime():dd.MM.yyyy HH:mm}";
-    public string SelectedPriceText => SelectedProduct is null ? string.Empty : FormatPrice(SelectedProduct.Price);
-    public string SelectedArrivalText => SelectedProduct is null
-        ? string.Empty
-        : $"Ожидается {SelectedProduct.ExpectedArrivalDate:dd MMMM yyyy}";
+        ? "Даты и цены в каталоге — демонстрационные"
+        : $"Демо-витрина обновлена {LastSyncUtc.Value.ToLocalTime():dd.MM.yyyy HH:mm}";
+    public string SelectedPriceText => SelectedProduct is null ? string.Empty : FormatMoney(SelectedProduct.Price);
+    public string SelectedArrivalText => SelectedProduct is null ? string.Empty : ArrivalLabel(SelectedProduct.ExpectedArrivalDate);
     public string SelectedAvailabilityText => SelectedProduct is null
         ? string.Empty
-        : SelectedProduct.IsAvailable ? $"Доступно: {SelectedProduct.AvailableQuantity} шт." : "Предзаказ недоступен";
-    public bool CanPlaceOrder => SelectedProduct is { IsAvailable: true, AvailableQuantity: > 0 } && OrderQuantity > 0 && !IsBusy;
+        : SelectedProduct.IsAvailable ? $"Можно добавить в предзаказ · {SelectedProduct.AvailableQuantity} демо-мест" : "Предзаказ пока закрыт";
 
-    public MainViewModel(StoreService store, CatalogSyncService sync)
+    public MainViewModel(StoreService store, CatalogSyncService sync, AuthService auth)
     {
         _store = store;
         _sync = sync;
+        _auth = auth;
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilters();
@@ -63,41 +87,109 @@ public partial class MainViewModel : ViewModelBase
     partial void OnSelectedSortChanged(string value) => ApplyFilters();
     partial void OnCurrentSectionChanged(string value)
     {
-        OnPropertyChanged(nameof(IsCatalogVisible));
-        OnPropertyChanged(nameof(IsOrdersVisible));
-        if (value == "Предзаказы") _ = LoadOrdersAsync();
+        NotifySections();
+        if (value == "Корзина") _ = LoadCartAsync();
+        if (value == "Заказы") _ = LoadOrdersAsync();
     }
+    partial void OnIsRegisterModeChanged(bool value)
+    {
+        NotifyAuthPanels();
+        OnPropertyChanged(nameof(AuthTitle));
+        OnPropertyChanged(nameof(AuthButtonText));
+        OnPropertyChanged(nameof(AuthSwitchText));
+    }
+    partial void OnNoticeChanged(string value) => OnPropertyChanged(nameof(HasNotice));
+    partial void OnCartCountChanged(int value) => OnPropertyChanged(nameof(CanCheckout));
+    partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(CanCheckout));
     partial void OnSelectedProductChanged(Product? value)
     {
         OnPropertyChanged(nameof(SelectedPriceText));
         OnPropertyChanged(nameof(SelectedArrivalText));
         OnPropertyChanged(nameof(SelectedAvailabilityText));
-        OnPropertyChanged(nameof(CanPlaceOrder));
         OnPropertyChanged(nameof(HasSelectedProduct));
         OnPropertyChanged(nameof(HasNoSelectedProduct));
     }
-    partial void OnOrderQuantityChanged(int value) => OnPropertyChanged(nameof(CanPlaceOrder));
-    partial void OnLastSyncUtcChanged(DateTime? value) => OnPropertyChanged(nameof(LastSyncText));
-    partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(CanPlaceOrder));
 
     public async Task InitializeAsync()
     {
         await LoadCatalogAsync();
-        if (Products.Count == 0)
-            await RefreshCatalogAsync();
+        if (Products.Count == 0) await RefreshCatalogAsync();
     }
 
     [RelayCommand]
     private void Navigate(string? section)
     {
-        if (section is "Каталог" or "Предзаказы") CurrentSection = section;
+        if (section is "Каталог" or "Корзина" or "Заказы") CurrentSection = section;
     }
 
     [RelayCommand]
-    private void SelectProduct(Product? product)
+    private void SelectProduct(Product? product) => SelectedProduct = product;
+
+    [RelayCommand]
+    private void ToggleAuthMode()
     {
-        SelectedProduct = product;
-        OrderQuantity = 1;
+        IsRegisterMode = !IsRegisterMode;
+        Notice = string.Empty;
+        HasError = false;
+    }
+
+    [RelayCommand]
+    private async Task RegisterAsync()
+    {
+        if (Password != PasswordConfirmation)
+        {
+            HasError = true;
+            Notice = "Пароли не совпадают.";
+            return;
+        }
+        IsBusy = true;
+        HasError = false;
+        try
+        {
+            var result = await _auth.RegisterAsync(DisplayName, Email, Password);
+            Notice = result.Message;
+            HasError = !result.Succeeded;
+            if (result.Succeeded) await EnterStoreAsync();
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            Notice = $"Не удалось создать аккаунт: {ex.Message}";
+        }
+        finally { IsBusy = false; }
+    }
+
+    [RelayCommand]
+    private async Task SignInAsync()
+    {
+        IsBusy = true;
+        HasError = false;
+        try
+        {
+            var result = await _auth.SignInAsync(Email, Password);
+            Notice = result.Message;
+            HasError = !result.Succeeded;
+            if (result.Succeeded) await EnterStoreAsync();
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            Notice = $"Не удалось выполнить вход: {ex.Message}";
+        }
+        finally { IsBusy = false; }
+    }
+
+    [RelayCommand]
+    private void SignOut()
+    {
+        _auth.Session.SignOut();
+        Email = string.Empty;
+        Password = string.Empty;
+        PasswordConfirmation = string.Empty;
+        IsRegisterMode = false;
+        Notice = "Вы вышли из аккаунта на этом устройстве.";
+        NotifyAuthPanels();
+        NotifySections();
     }
 
     [RelayCommand]
@@ -107,25 +199,13 @@ public partial class MainViewModel : ViewModelBase
         _isRefreshing = true;
         IsBusy = true;
         HasError = false;
-        Notice = "Обновляем каталог";
+        Notice = "Обновляем демонстрационную витрину…";
         try
         {
             var count = await _sync.SynchronizeAsync();
             await LoadCatalogAsync();
             LastSyncUtc = DateTime.UtcNow;
-            Notice = $"Каталог обновлён. Получено товаров: {count}.";
-        }
-        catch (HttpRequestException)
-        {
-            HasError = true;
-            Notice = Products.Count > 0
-                ? "Нет соединения с каталогом. Показаны сохранённые товары."
-                : "Не удалось загрузить каталог. Проверьте подключение к интернету.";
-        }
-        catch (TaskCanceledException)
-        {
-            HasError = true;
-            Notice = "Время ожидания ответа каталога истекло. Попробуйте ещё раз.";
+            Notice = $"Витрина обновлена · позиций: {count}. Даты и цены примера.";
         }
         catch (Exception ex)
         {
@@ -140,17 +220,58 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task PlaceOrderAsync()
+    private async Task AddToCartAsync(Product? product)
     {
-        if (SelectedProduct is null) return;
-        IsBusy = true;
+        var customerId = _auth.Session.Customer?.Id;
+        if (product is null || customerId is null) return;
         try
         {
-            var order = await _store.PlacePreOrderAsync(SelectedProduct.Id, OrderQuantity);
-            Notice = $"Предзаказ №{order.Id} оформлен и ожидает подтверждения.";
-            OrderQuantity = 1;
+            await _store.AddToCartAsync(customerId.Value, product.Id);
+            Notice = $"«{product.Name}» добавлен в корзину.";
+            await LoadCartAsync();
+        }
+        catch (PreOrderException ex)
+        {
+            HasError = true;
+            Notice = ex.Message;
+        }
+        if (SelectedProduct?.Id == product.Id) SelectedProduct = product;
+    }
+
+    [RelayCommand]
+    private async Task RemoveFromCartAsync(CartItem? item)
+    {
+        var customerId = _auth.Session.Customer?.Id;
+        if (item is null || customerId is null) return;
+        try
+        {
+            await _store.RemoveFromCartAsync(customerId.Value, item.Id);
+            await LoadCartAsync();
+            Notice = "Корзина обновлена.";
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            Notice = ex.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task CheckoutAsync()
+    {
+        var customerId = _auth.Session.Customer?.Id;
+        if (customerId is null) return;
+        IsBusy = true;
+        HasError = false;
+        try
+        {
+            var orders = await _store.CheckoutAsync(customerId.Value);
+            Notice = orders.Count == 1
+                ? $"Предзаказ №{orders[0].Id} оформлен. Оплата не производится."
+                : $"Оформлено предзаказов: {orders.Count}. Оплата не производится.";
+            await LoadCartAsync();
             await LoadOrdersAsync();
-            await LoadCatalogAsync();
+            CurrentSection = "Заказы";
         }
         catch (PreOrderException ex)
         {
@@ -168,13 +289,13 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private async Task CancelOrderAsync(PreOrder? order)
     {
-        if (order is null) return;
+        var customerId = _auth.Session.Customer?.Id;
+        if (order is null || customerId is null) return;
         try
         {
-            await _store.CancelPreOrderAsync(order.Id);
+            await _store.CancelPreOrderAsync(order.Id, customerId.Value);
             Notice = $"Предзаказ №{order.Id} отменён.";
             await LoadOrdersAsync();
-            await LoadCatalogAsync();
         }
         catch (Exception ex)
         {
@@ -183,12 +304,37 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand]
+    private async Task EnterStoreAsync()
+    {
+        Password = string.Empty;
+        PasswordConfirmation = string.Empty;
+        NotifyAuthPanels();
+        NotifySections();
+        OnPropertyChanged(nameof(CurrentUserName));
+        await LoadCartAsync();
+        CurrentSection = "Каталог";
+    }
+
+    private async Task LoadCartAsync()
+    {
+        var customerId = _auth.Session.Customer?.Id;
+        if (customerId is null) return;
+        var items = await _store.GetCartItemsAsync(customerId.Value);
+        CartItems.Clear();
+        foreach (var item in items) CartItems.Add(item);
+        CartCount = items.Sum(x => x.Quantity);
+        CartTotal = items.Sum(x => x.Quantity * x.Product.Price);
+        OnPropertyChanged(nameof(HasNoCartItems));
+        OnPropertyChanged(nameof(CartTotalText));
+    }
+
     private async Task LoadOrdersAsync()
     {
+        var customerId = _auth.Session.Customer?.Id;
+        if (customerId is null) return;
         try
         {
-            var orders = await _store.GetPreOrdersAsync();
+            var orders = await _store.GetPreOrdersAsync(customerId.Value);
             PreOrders.Clear();
             foreach (var order in orders) PreOrders.Add(order);
             OnPropertyChanged(nameof(HasNoOrders));
@@ -196,7 +342,7 @@ public partial class MainViewModel : ViewModelBase
         catch (Exception ex)
         {
             HasError = true;
-            Notice = $"Не удалось прочитать предзаказы: {ex.Message}";
+            Notice = $"Не удалось прочитать историю заказов: {ex.Message}";
         }
     }
 
@@ -205,10 +351,8 @@ public partial class MainViewModel : ViewModelBase
         var items = await _store.GetProductsAsync();
         Products.Clear();
         foreach (var item in items) Products.Add(item);
-        LastSyncUtc = Products.Count == 0 ? null : Products.Max(x => x.UpdatedAtUtc);
         if (SelectedProduct is not null)
             SelectedProduct = Products.FirstOrDefault(x => x.Id == SelectedProduct.Id);
-
         var categories = Products.Select(x => x.Category).Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase).ToArray();
         Categories.Clear();
@@ -220,20 +364,18 @@ public partial class MainViewModel : ViewModelBase
 
     private void ApplyFilters()
     {
-        var query = Products.AsEnumerable();
+        IEnumerable<Product> query = Products;
         if (!string.IsNullOrWhiteSpace(SearchText))
             query = query.Where(x => x.Name.Contains(SearchText.Trim(), StringComparison.CurrentCultureIgnoreCase));
-        if (!string.IsNullOrWhiteSpace(SelectedCategory) && SelectedCategory != "Все категории")
-            query = query.Where(x => x.Category == SelectedCategory);
-        if (SelectedAvailability == "Доступен") query = query.Where(x => x.IsAvailable);
-        else if (SelectedAvailability == "Недоступен") query = query.Where(x => !x.IsAvailable);
-
+        if (SelectedCategory != "Все категории") query = query.Where(x => x.Category == SelectedCategory);
+        if (SelectedAvailability == "Предзаказ открыт") query = query.Where(x => x.IsAvailable);
+        else if (SelectedAvailability == "Скоро") query = query.Where(x => !x.IsAvailable);
         query = SelectedSort switch
         {
             "По названию" => query.OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase),
             "Сначала дешевле" => query.OrderBy(x => x.Price).ThenBy(x => x.Name),
             "Сначала дороже" => query.OrderByDescending(x => x.Price).ThenBy(x => x.Name),
-            _ => query.OrderBy(x => x.ExpectedArrivalDate).ThenBy(x => x.Name)
+            _ => query.OrderBy(x => x.ExpectedArrivalDate is null).ThenBy(x => x.ExpectedArrivalDate).ThenBy(x => x.Name)
         };
         FilteredProducts.Clear();
         foreach (var product in query) FilteredProducts.Add(product);
@@ -241,6 +383,27 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasNoProducts));
     }
 
-    private static string FormatPrice(decimal price) =>
-        price.ToString("N2", CultureInfo.GetCultureInfo("en-US")) + " USD";
+    private void NotifyAuthPanels()
+    {
+        OnPropertyChanged(nameof(IsAuthenticated));
+        OnPropertyChanged(nameof(IsAuthVisible));
+        OnPropertyChanged(nameof(IsSignInPanel));
+        OnPropertyChanged(nameof(IsRegisterPanel));
+        OnPropertyChanged(nameof(IsAppVisible));
+        OnPropertyChanged(nameof(CurrentUserName));
+        NotifySections();
+    }
+
+    private void NotifySections()
+    {
+        OnPropertyChanged(nameof(IsCatalogVisible));
+        OnPropertyChanged(nameof(IsCartVisible));
+        OnPropertyChanged(nameof(IsOrdersVisible));
+        OnPropertyChanged(nameof(IsCatalogSelected));
+        OnPropertyChanged(nameof(IsCartSelected));
+        OnPropertyChanged(nameof(IsOrdersSelected));
+    }
+
+    public static string FormatMoney(decimal value) => value.ToString("N0", RuCulture) + " ₽";
+    public static string ArrivalLabel(DateTime? date) => date is null ? "Дата выхода уточняется" : $"Ожидается {date.Value:dd.MM.yyyy}";
 }

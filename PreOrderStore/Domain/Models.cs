@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Globalization;
 
 namespace PreOrderStore.Domain;
 
@@ -10,6 +11,18 @@ public enum PreOrderStatus
     Fulfilled = 3
 }
 
+public sealed class StoreCustomer
+{
+    public int Id { get; set; }
+    public required string DisplayName { get; set; }
+    public required string EmailNormalized { get; set; }
+    public required string PasswordSalt { get; set; }
+    public required string PasswordHash { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+    public ICollection<PreOrder> PreOrders { get; set; } = new List<PreOrder>();
+    public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
+}
+
 public sealed class Product
 {
     public int Id { get; set; }
@@ -18,18 +31,44 @@ public sealed class Product
     public string Description { get; set; } = string.Empty;
     public required string Category { get; set; }
     public decimal Price { get; set; }
-    public string? ImageUrl { get; set; }
-    public DateTime ExpectedArrivalDate { get; set; }
+    public string? ImageAssetPath { get; set; }
+    public DateTime? ExpectedArrivalDate { get; set; }
     public int AvailableQuantity { get; set; }
     public bool IsAvailable { get; set; }
+    public bool IsDemoData { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
     public ICollection<PreOrder> PreOrders { get; set; } = new List<PreOrder>();
+    public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
+
+    [NotMapped]
+    public string PriceDisplay => Price.ToString("N0", CultureInfo.GetCultureInfo("ru-RU")) + " ₽";
+
+    [NotMapped]
+    public string ArrivalDisplay => ExpectedArrivalDate is null ? "Дата выхода уточняется" : $"Ожидается {ExpectedArrivalDate:dd.MM.yyyy}";
+
+    [NotMapped]
+    public string ReleaseStateDisplay => IsAvailable ? "Предзаказ открыт" : "Скоро";
+}
+
+public sealed class CartItem
+{
+    public int Id { get; set; }
+    public int CustomerId { get; set; }
+    public StoreCustomer Customer { get; set; } = null!;
+    public int ProductId { get; set; }
+    public Product Product { get; set; } = null!;
+    public int Quantity { get; set; }
+
+    [NotMapped]
+    public string LineTotalDisplay => (Quantity * Product.Price).ToString("N0", CultureInfo.GetCultureInfo("ru-RU")) + " ₽";
 }
 
 public sealed class PreOrder
 {
     public int Id { get; set; }
+    public int? CustomerId { get; set; }
+    public StoreCustomer? Customer { get; set; }
     public int ProductId { get; set; }
     public Product Product { get; set; } = null!;
     public int Quantity { get; set; }
@@ -52,6 +91,11 @@ public sealed class PreOrder
 
     [NotMapped]
     public decimal Total => UnitPriceAtOrder * Quantity;
+
+    [NotMapped]
+    public string TotalDisplay => Total.ToString("N0", CultureInfo.GetCultureInfo("ru-RU")) + " ₽";
 }
+
+public sealed record RegistrationResult(bool Succeeded, string Message);
 
 public sealed class PreOrderException(string message) : Exception(message);

@@ -26,12 +26,9 @@ internal static class Program
             {
                 services.AddDbContext<StoreDbContext>(options =>
                     options.UseSqlite($"Data Source={Path.Combine(dataDirectory, "preorder-store.db")}"));
-                services.AddHttpClient<IProductProvider, DummyJsonProductProvider>(client =>
-                {
-                    client.BaseAddress = new Uri("https://dummyjson.com/");
-                    client.Timeout = TimeSpan.FromSeconds(15);
-                    client.DefaultRequestHeaders.UserAgent.ParseAdd("PreOrderStore/1.0");
-                });
+                services.AddSingleton<IProductProvider, DemoUpcomingProductProvider>();
+                services.AddSingleton<UserSession>();
+                services.AddScoped<AuthService>();
                 services.AddScoped<CatalogSyncService>();
                 services.AddScoped<StoreService>();
                 services.AddScoped<MainViewModel>();

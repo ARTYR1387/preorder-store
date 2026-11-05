@@ -3,181 +3,520 @@
         xmlns:vm="using:PreOrderStore.ViewModels"
         xmlns:views="using:PreOrderStore.Views"
         xmlns:domain="using:PreOrderStore.Domain"
+        xmlns:svg="using:Avalonia.Svg"
         x:Class="PreOrderStore.Views.MainWindow"
         x:DataType="vm:MainViewModel"
-        Title="PreOrder Store" Width="1360" Height="860" MinWidth="980" MinHeight="640"
-        Background="#F5F5F2" WindowStartupLocation="CenterScreen">
+        Title="PreOrder Store · Предзаказы новинок"
+        Width="1440" Height="920" MinWidth="1120" MinHeight="720"
+        Background="#F4F5F1" WindowStartupLocation="CenterScreen">
   <Window.Styles>
     <Style Selector="TextBlock">
-      <Setter Property="Foreground" Value="#20231F" />
+      <Setter Property="Foreground" Value="#202720" />
       <Setter Property="FontFamily" Value="Inter" />
+      <Setter Property="FontSize" Value="13" />
+    </Style>
+    <Style Selector="Button">
+      <Setter Property="FontFamily" Value="Inter" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.16" />
+          <BrushTransition Property="BorderBrush" Duration="0:0:0.16" />
+          <DoubleTransition Property="Opacity" Duration="0:0:0.14" />
+        </Transitions>
+      </Setter>
     </Style>
     <Style Selector="Button.nav">
-      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="Padding" Value="14,10" />
-      <Setter Property="CornerRadius" Value="8" />
-      <Setter Property="Foreground" Value="#535A54" />
+      <Setter Property="Padding" Value="12,11" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Foreground" Value="#59655C" />
     </Style>
     <Style Selector="Button.nav:pointerover">
-      <Setter Property="Background" Value="#E8EBE6" />
+      <Setter Property="Background" Value="#F7F9F6" />
+      <Setter Property="Foreground" Value="#244A35" />
+    </Style>
+    <Style Selector="Button.nav.active">
+      <Setter Property="Background" Value="#DCE8DE" />
+      <Setter Property="Foreground" Value="#244A35" />
+      <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
     <Style Selector="Button.primary">
-      <Setter Property="Background" Value="#28634E" />
-      <Setter Property="Foreground" Value="White" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="CornerRadius" Value="8" />
-      <Setter Property="Padding" Value="16,10" />
+      <Setter Property="Background" Value="#246247" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+      <Setter Property="BorderBrush" Value="#246247" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="Padding" Value="15,10" />
     </Style>
     <Style Selector="Button.primary:pointerover">
-      <Setter Property="Background" Value="#1F513F" />
+      <Setter Property="Background" Value="#1B523A" />
+      <Setter Property="BorderBrush" Value="#1B523A" />
+    </Style>
+    <Style Selector="Button.primary:pressed">
+      <Setter Property="Opacity" Value="0.88" />
     </Style>
     <Style Selector="Button.secondary">
       <Setter Property="Background" Value="#FFFFFF" />
-      <Setter Property="Foreground" Value="#20231F" />
-      <Setter Property="BorderBrush" Value="#D9DDD7" />
+      <Setter Property="Foreground" Value="#26332A" />
+      <Setter Property="BorderBrush" Value="#D9E0D9" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="Padding" Value="13,9" />
+    </Style>
+    <Style Selector="Button.secondary:pointerover">
+      <Setter Property="Background" Value="#F2F6F2" />
+      <Setter Property="BorderBrush" Value="#A7B7AA" />
+    </Style>
+    <Style Selector="Button.icon-button">
+      <Setter Property="Background" Value="#F6F8F5" />
+      <Setter Property="BorderBrush" Value="#E1E6E0" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="8" />
-      <Setter Property="Padding" Value="12,8" />
+      <Setter Property="Padding" Value="6" />
+      <Setter Property="MinWidth" Value="34" />
+      <Setter Property="MinHeight" Value="34" />
     </Style>
-    <Style Selector="TextBox, ComboBox, NumericUpDown">
+    <Style Selector="Button.icon-button:pointerover">
+      <Setter Property="Background" Value="#E8EFE9" />
+    </Style>
+    <Style Selector="Button.link">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Foreground" Value="#246247" />
+      <Setter Property="Padding" Value="4,7" />
+    </Style>
+    <Style Selector="Button.link:pointerover">
+      <Setter Property="Foreground" Value="#173F2C" />
+      <Setter Property="Opacity" Value="0.78" />
+    </Style>
+    <Style Selector="TextBox">
+      <Setter Property="FontFamily" Value="Inter" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="MinHeight" Value="42" />
+      <Setter Property="Padding" Value="10,8" />
       <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Background" Value="#FAFBF9" />
+      <Setter Property="BorderBrush" Value="#DDE3DD" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="ComboBox">
+      <Setter Property="FontFamily" Value="Inter" />
+      <Setter Property="FontSize" Value="12" />
       <Setter Property="MinHeight" Value="38" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Background" Value="#FFFFFF" />
+      <Setter Property="BorderBrush" Value="#DDE3DD" />
+    </Style>
+    <Style Selector="Border.product-card">
+      <Setter Property="RenderTransform" Value="translateY(0px)" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="BorderBrush" Duration="0:0:0.17" />
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.17" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Border.product-card:pointerover">
+      <Setter Property="BorderBrush" Value="#9EAF9F" />
+      <Setter Property="RenderTransform" Value="translateY(-2px)" />
+    </Style>
+    <Style Selector="TextBlock.form-label">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontWeight" Value="Medium" />
+      <Setter Property="Foreground" Value="#4E5C51" />
+    </Style>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Foreground" Value="#728078" />
+    </Style>
+    <Style Selector="TextBlock.notice-error">
+      <Setter Property="Foreground" Value="#9A493F" />
+    </Style>
+    <Style Selector="Border.surface">
+      <Setter Property="Background" Value="#FFFFFF" />
+      <Setter Property="BorderBrush" Value="#E0E5DF" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="14" />
+    </Style>
+    <Style Selector="Border.release-badge">
+      <Setter Property="Background" Value="#E4EFE7" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Padding" Value="8,4" />
+    </Style>
+    <Style Selector="Border.demo-badge">
+      <Setter Property="Background" Value="#F1ECE2" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="7,3" />
     </Style>
   </Window.Styles>
 
-  <Grid ColumnDefinitions="220,*">
-    <Border Grid.Column="0" Background="#ECEEE9" BorderBrush="#DDE0DA" BorderThickness="0,0,1,0">
-      <Grid RowDefinitions="Auto,*,Auto" Margin="20,24,16,16">
-        <StackPanel Spacing="4">
-          <TextBlock Text="PreOrder Store" FontSize="18" FontWeight="SemiBold" />
-          <TextBlock Text="Магазин предзаказов" FontSize="12" Foreground="#69716A" />
-        </StackPanel>
-        <StackPanel Grid.Row="1" Margin="0,32,0,0" Spacing="4">
-          <TextBlock Text="Магазин" FontSize="12" Foreground="#69716A" Margin="12,0,0,8" />
-          <Button Classes="nav" Content="Каталог" Command="{Binding NavigateCommand}" CommandParameter="Каталог" />
-          <Button Classes="nav" Content="Предзаказы" Command="{Binding NavigateCommand}" CommandParameter="Предзаказы" />
-        </StackPanel>
-        <TextBlock Grid.Row="2" Text="Демонстрационный проект&#10;Каталог DummyJSON" FontSize="11" Foreground="#737A74" TextWrapping="Wrap" />
-      </Grid>
-    </Border>
+  <Grid Background="#F4F5F1">
+    <!-- Signed-in store shell -->
+    <Grid IsVisible="{Binding IsAppVisible}" ColumnDefinitions="232,*">
+      <Border Grid.Column="0" Background="#E9EDE8" BorderBrush="#DCE2DC" BorderThickness="0,0,1,0">
+        <Grid RowDefinitions="Auto,*,Auto" Margin="17,22,15,16">
+          <Grid ColumnDefinitions="42,*" ColumnSpacing="10" VerticalAlignment="Center">
+            <Border Background="#246247" CornerRadius="11" Width="42" Height="42">
+              <svg:Svg Path="/Assets/Icons/mark.svg" Width="25" Height="25" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+              <TextBlock Text="PreOrder" FontSize="17" FontWeight="SemiBold" LetterSpacing="-0.25" />
+              <TextBlock Text="STORE · НОВИНКИ" FontSize="9" FontWeight="SemiBold" Foreground="#6E7B71" LetterSpacing="1.1" />
+            </StackPanel>
+          </Grid>
 
-    <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto">
-      <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="28,20,28,16">
-        <StackPanel Spacing="4">
-          <TextBlock Text="{Binding CurrentSection}" FontSize="25" FontWeight="SemiBold" />
-          <TextBlock Text="{Binding LastSyncText}" FontSize="12" Foreground="#69716A" />
-        </StackPanel>
-        <Button Grid.Column="1" Classes="secondary" Content="Обновить каталог" Command="{Binding RefreshCatalogCommand}" VerticalAlignment="Center" />
-      </Grid>
+          <StackPanel Grid.Row="1" Margin="0,36,0,0" Spacing="5">
+            <TextBlock Text="МАГАЗИН" FontSize="10" FontWeight="SemiBold" Foreground="#879188" LetterSpacing="1.2" Margin="12,0,0,8" />
+            <Button Classes="nav" Classes.active="{Binding IsCatalogSelected}" Command="{Binding NavigateCommand}" CommandParameter="Каталог">
+              <Grid ColumnDefinitions="28,*" ColumnSpacing="9">
+                <svg:Svg Path="/Assets/Icons/catalog.svg" Width="19" Height="19" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="Каталог" VerticalAlignment="Center" />
+              </Grid>
+            </Button>
+            <Button Classes="nav" Classes.active="{Binding IsCartSelected}" Command="{Binding NavigateCommand}" CommandParameter="Корзина">
+              <Grid ColumnDefinitions="28,*,Auto" ColumnSpacing="9">
+                <svg:Svg Path="/Assets/Icons/bag.svg" Width="19" Height="19" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="Корзина" VerticalAlignment="Center" />
+                <Border Grid.Column="2" Background="#DCE8DE" CornerRadius="8" Padding="7,2" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding CartCount}" FontSize="10" FontWeight="SemiBold" Foreground="#365C43" />
+                </Border>
+              </Grid>
+            </Button>
+            <Button Classes="nav" Classes.active="{Binding IsOrdersSelected}" Command="{Binding NavigateCommand}" CommandParameter="Заказы">
+              <Grid ColumnDefinitions="28,*" ColumnSpacing="9">
+                <svg:Svg Path="/Assets/Icons/receipt.svg" Width="19" Height="19" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="Мои предзаказы" VerticalAlignment="Center" />
+              </Grid>
+            </Button>
 
-      <Grid Grid.Row="1" Margin="28,0,28,20">
-        <Grid IsVisible="{Binding IsCatalogVisible}" ColumnDefinitions="*,320" ColumnSpacing="20">
-          <Grid Grid.Column="0" RowDefinitions="Auto,*" RowSpacing="16">
-            <Grid ColumnDefinitions="*,150,150,190" ColumnSpacing="10">
-              <TextBox PlaceholderText="Поиск по названию" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
-              <ComboBox Grid.Column="1" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" />
-              <ComboBox Grid.Column="2" ItemsSource="{Binding AvailabilityOptions}" SelectedItem="{Binding SelectedAvailability}" />
-              <ComboBox Grid.Column="3" ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSort}" />
+            <Border Background="#F3F5F1" CornerRadius="10" Padding="11" Margin="3,22,3,0">
+              <Grid ColumnDefinitions="24,*" ColumnSpacing="8">
+                <svg:Svg Path="/Assets/Icons/info.svg" Width="18" Height="18" VerticalAlignment="Top" Margin="0,2,0,0" />
+                <StackPanel Grid.Column="1" Spacing="4">
+                  <TextBlock Text="Демо-витрина" FontSize="12" FontWeight="SemiBold" />
+                  <TextBlock Text="Цены, товары и места — пример. Оплаты и реальной поставки нет." FontSize="10.5" Foreground="#737F75" TextWrapping="Wrap" LineHeight="15" />
+                </StackPanel>
+              </Grid>
+            </Border>
+          </StackPanel>
+
+          <Border Grid.Row="2" Background="#F3F5F1" CornerRadius="12" Padding="11">
+            <Grid ColumnDefinitions="30,*,Auto" ColumnSpacing="8">
+              <Border Width="30" Height="30" CornerRadius="15" Background="#D8E4DA">
+                <svg:Svg Path="/Assets/Icons/user.svg" Width="17" Height="17" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                <TextBlock Text="{Binding CurrentUserName}" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="Локальный аккаунт" FontSize="9" Foreground="#778279" />
+              </StackPanel>
+              <Button Grid.Column="2" Classes="icon-button" Command="{Binding SignOutCommand}" ToolTip.Tip="Выйти">
+                <svg:Svg Path="/Assets/Icons/logout.svg" Width="17" Height="17" />
+              </Button>
+            </Grid>
+          </Border>
+        </Grid>
+      </Border>
+
+      <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="14" Margin="32,22,32,18">
+          <StackPanel VerticalAlignment="Center" Spacing="3">
+            <TextBlock Text="{Binding CurrentSection}" FontSize="24" FontWeight="SemiBold" LetterSpacing="-0.4" />
+            <TextBlock Text="Техника и устройства до официального старта" FontSize="12" Foreground="#718076" />
+          </StackPanel>
+          <Border Grid.Column="1" Classes="demo-badge" VerticalAlignment="Center">
+            <TextBlock Text="ДЕМО · ₽" FontSize="10" FontWeight="SemiBold" Foreground="#695A3D" LetterSpacing="0.6" />
+          </Border>
+          <Button Grid.Column="2" Classes="secondary" Command="{Binding RefreshCatalogCommand}" VerticalAlignment="Center" IsEnabled="{Binding !IsBusy}">
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <svg:Svg Path="/Assets/Icons/refresh.svg" Width="17" Height="17" />
+              <TextBlock Text="Обновить витрину" FontSize="12" />
+            </StackPanel>
+          </Button>
+        </Grid>
+
+        <Grid Grid.Row="1" Margin="32,0,32,18">
+          <!-- Release catalogue -->
+          <Grid IsVisible="{Binding IsCatalogVisible}" ColumnDefinitions="*,292" ColumnSpacing="18">
+            <Grid Grid.Column="0" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">
+              <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Ближайшие новинки" FontSize="16" FontWeight="SemiBold" />
+                  <TextBlock Text="Демо-позиции для проверки сценария предзаказа" FontSize="11" Foreground="#7A857C" />
+                </StackPanel>
+                <Border Grid.Column="1" Background="#FFFFFF" BorderBrush="#E1E6E0" BorderThickness="1" CornerRadius="8" Padding="9,6" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding FilteredProducts.Count, StringFormat='{}{0} позиции'}" FontSize="10" Foreground="#68746B" />
+                </Border>
+              </Grid>
+
+              <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#DDE3DD" BorderThickness="1" CornerRadius="9" Padding="10,0">
+                <Grid ColumnDefinitions="22,*" ColumnSpacing="8">
+                  <svg:Svg Path="/Assets/Icons/search.svg" Width="18" Height="18" VerticalAlignment="Center" />
+                  <TextBox Grid.Column="1" PlaceholderText="Поиск по названию новинки" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Background="Transparent" BorderThickness="0" MinHeight="40" Padding="2,8" />
+                </Grid>
+              </Border>
+
+              <Grid Grid.Row="2" ColumnDefinitions="1.15*,1.1*,1.65*" ColumnSpacing="8">
+                <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" />
+                <ComboBox Grid.Column="1" ItemsSource="{Binding AvailabilityOptions}" SelectedItem="{Binding SelectedAvailability}" />
+                <ComboBox Grid.Column="2" ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSort}" />
+              </Grid>
+
+              <Grid Grid.Row="3">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                  <ItemsControl ItemsSource="{Binding FilteredProducts}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="domain:Product">
+                        <Border Classes="surface product-card" Width="244" Margin="0,0,12,14" Padding="12">
+                          <StackPanel Spacing="9">
+                            <Grid Height="124">
+                              <Border Background="#F2F4F0" CornerRadius="10" ClipToBounds="True">
+                                <svg:Svg Path="{Binding ImageAssetPath}" Stretch="UniformToFill" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+                              </Border>
+                              <Border Classes="release-badge" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8">
+                                <TextBlock Text="{Binding ReleaseStateDisplay}" FontSize="9" FontWeight="SemiBold" Foreground="#365C43" />
+                              </Border>
+                            </Grid>
+                            <TextBlock Text="{Binding Category}" FontSize="10" FontWeight="Medium" Foreground="#7A857C" />
+                            <Button Classes="link" HorizontalContentAlignment="Left" Padding="0" Tag="{Binding}" Click="OnSelectProductClick">
+                              <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" MaxHeight="42" />
+                            </Button>
+                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center" Margin="0,2,0,0">
+                              <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding PriceDisplay}" FontSize="16" FontWeight="SemiBold" Foreground="#234B37" />
+                                <TextBlock Text="{Binding ArrivalDisplay}" FontSize="9.5" Foreground="#78847A" />
+                              </StackPanel>
+                              <Button Grid.Column="1" Classes="primary" Tag="{Binding}" Click="OnAddToCartClick" IsEnabled="{Binding IsAvailable}" Padding="9,7" ToolTip.Tip="Добавить в корзину">
+                                <svg:Svg Path="/Assets/Icons/plus.svg" Width="17" Height="17" />
+                              </Button>
+                            </Grid>
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+                <StackPanel IsVisible="{Binding HasNoProducts}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" MaxWidth="300">
+                  <svg:Svg Path="/Assets/Icons/search.svg" Width="34" Height="34" HorizontalAlignment="Center" />
+                  <TextBlock Text="Ничего не найдено" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                  <TextBlock Text="Измените запрос или параметры фильтра." FontSize="11" Foreground="#758178" TextWrapping="Wrap" TextAlignment="Center" />
+                </StackPanel>
+              </Grid>
+            </Grid>
+
+            <!-- Product detail -->
+            <Border Grid.Column="1" Classes="surface" Padding="15">
+              <Grid>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasSelectedProduct}">
+                  <StackPanel Spacing="13">
+                    <Grid Height="166">
+                      <Border Background="#F2F4F0" CornerRadius="10" ClipToBounds="True">
+                        <svg:Svg Path="{Binding SelectedProduct.ImageAssetPath}" Stretch="UniformToFill" />
+                      </Border>
+                      <Border Classes="release-badge" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="9">
+                        <TextBlock Text="{Binding SelectedProduct.ReleaseStateDisplay}" FontSize="9" FontWeight="SemiBold" Foreground="#365C43" />
+                      </Border>
+                    </Grid>
+                    <TextBlock Text="{Binding SelectedProduct.Category}" FontSize="10" FontWeight="Medium" Foreground="#7A857C" />
+                    <TextBlock Text="{Binding SelectedProduct.Name}" FontSize="19" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding SelectedPriceText}" FontSize="22" FontWeight="SemiBold" Foreground="#234B37" />
+                    <Grid ColumnDefinitions="22,*" ColumnSpacing="7">
+                      <svg:Svg Path="/Assets/Icons/calendar.svg" Width="17" Height="17" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1" Text="{Binding SelectedArrivalText}" FontSize="11" Foreground="#68746B" VerticalAlignment="Center" />
+                    </Grid>
+                    <TextBlock Text="{Binding SelectedAvailabilityText}" FontSize="11" Foreground="#53675A" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding SelectedProduct.Description}" FontSize="11" Foreground="#6D786F" TextWrapping="Wrap" LineHeight="16" />
+                    <Border Background="#F5F3ED" BorderBrush="#E9E4D9" BorderThickness="1" CornerRadius="9" Padding="10">
+                      <Grid ColumnDefinitions="22,*" ColumnSpacing="6">
+                        <svg:Svg Path="/Assets/Icons/info.svg" Width="16" Height="16" VerticalAlignment="Top" />
+                        <TextBlock Grid.Column="1" Text="Концепт-витрина: товар, цена, сроки и количество условные. Оплата и реальная поставка не выполняются." FontSize="9.5" Foreground="#6F6655" TextWrapping="Wrap" LineHeight="14" />
+                      </Grid>
+                    </Border>
+                    <Button Classes="primary" Content="Добавить в корзину" Tag="{Binding SelectedProduct}" Click="OnAddToCartClick" IsEnabled="{Binding SelectedProduct.IsAvailable}" HorizontalContentAlignment="Center" />
+                  </StackPanel>
+                </ScrollViewer>
+                <StackPanel IsVisible="{Binding HasNoSelectedProduct}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="11" MaxWidth="210">
+                  <svg:Svg Path="/Assets/Icons/catalog.svg" Width="31" Height="31" HorizontalAlignment="Center" />
+                  <TextBlock Text="Выберите новинку" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                  <TextBlock Text="Здесь появятся подробности и условия демо-предзаказа." FontSize="10.5" Foreground="#778279" TextWrapping="Wrap" TextAlignment="Center" />
+                </StackPanel>
+              </Grid>
+            </Border>
+          </Grid>
+
+          <!-- Persistent local cart -->
+          <Grid IsVisible="{Binding IsCartVisible}" RowDefinitions="Auto,*,Auto" RowSpacing="13">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="3">
+                <TextBlock Text="Ваша корзина" FontSize="17" FontWeight="SemiBold" />
+                <TextBlock Text="Цены фиксируются при оформлении демо-предзаказа" FontSize="11" Foreground="#778279" />
+              </StackPanel>
+              <Border Grid.Column="1" Classes="demo-badge" VerticalAlignment="Center">
+                <TextBlock Text="БЕЗ ОПЛАТЫ" FontSize="9" FontWeight="SemiBold" Foreground="#695A3D" />
+              </Border>
             </Grid>
             <Grid Grid.Row="1">
               <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding FilteredProducts}">
-                  <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
-                  </ItemsControl.ItemsPanel>
+                <ItemsControl ItemsSource="{Binding CartItems}">
                   <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="domain:Product">
-                      <Border Width="208" Margin="0,0,12,12" Padding="10" Background="White" BorderBrush="#E0E3DD" BorderThickness="1" CornerRadius="12">
-                        <StackPanel Spacing="8">
-                          <views:RemoteImage Url="{Binding ImageUrl}" Height="116" Stretch="UniformToFill" HorizontalAlignment="Stretch" />
-                          <TextBlock Text="{Binding Category}" FontSize="11" Foreground="#69716A" />
-                          <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="Medium" TextWrapping="Wrap" MaxHeight="40" />
-                          <TextBlock Text="{Binding ExpectedArrivalDate, StringFormat='Ожидается dd.MM.yyyy'}" FontSize="11" Foreground="#69716A" />
-                          <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Text="{Binding Price, StringFormat='{}{0:N2} USD'}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
-                            <Button Grid.Column="1" Classes="secondary" Content="Подробнее" Padding="9,5"
-                                    Tag="{Binding}" Click="OnSelectProductClick" />
-                          </Grid>
-                        </StackPanel>
+                    <DataTemplate x:DataType="domain:CartItem">
+                      <Border Classes="surface" Margin="0,0,0,10" Padding="12">
+                        <Grid ColumnDefinitions="100,*,Auto,Auto" ColumnSpacing="15">
+                          <Border Background="#F2F4F0" CornerRadius="9" ClipToBounds="True" Height="74">
+                            <svg:Svg Path="{Binding Product.ImageAssetPath}" Stretch="UniformToFill" />
+                          </Border>
+                          <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                            <TextBlock Text="{Binding Product.Name}" FontSize="14" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding Product.PriceDisplay}" FontSize="11" Foreground="#738077" />
+                            <TextBlock Text="{Binding Product.ArrivalDisplay}" FontSize="10" Foreground="#879188" />
+                          </StackPanel>
+                          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Button Classes="icon-button" Tag="{Binding}" Click="OnDecrementCartClick">
+                              <svg:Svg Path="/Assets/Icons/minus.svg" Width="15" Height="15" />
+                            </Button>
+                            <TextBlock Text="{Binding Quantity}" MinWidth="18" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" />
+                            <Button Classes="icon-button" Tag="{Binding Product}" Click="OnAddToCartClick" IsEnabled="{Binding Product.IsAvailable}">
+                              <svg:Svg Path="/Assets/Icons/catalog.svg" Width="15" Height="15" />
+                            </Button>
+                          </StackPanel>
+                          <TextBlock Grid.Column="3" Text="{Binding LineTotalDisplay}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" MinWidth="110" TextAlignment="Right" />
+                        </Grid>
                       </Border>
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
               </ScrollViewer>
-              <TextBlock Text="Ничего не найдено. Измените запрос или фильтр."
-                         IsVisible="{Binding HasNoProducts}"
-                         HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#69716A" />
+              <StackPanel IsVisible="{Binding HasNoCartItems}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                <svg:Svg Path="/Assets/Icons/empty-bag.svg" Width="52" Height="52" HorizontalAlignment="Center" />
+                <TextBlock Text="Корзина пока пуста" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                <TextBlock Text="Добавьте интересующие новинки из каталога." FontSize="11" Foreground="#778279" HorizontalAlignment="Center" />
+                <Button Classes="secondary" Content="Перейти в каталог" Command="{Binding NavigateCommand}" CommandParameter="Каталог" HorizontalAlignment="Center" />
+              </StackPanel>
             </Grid>
-          </Grid>
-
-          <Border Grid.Column="1" Background="White" BorderBrush="#E0E3DD" BorderThickness="1" CornerRadius="12" Padding="18">
-            <Grid>
-              <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasSelectedProduct}">
-                <StackPanel Spacing="12">
-                  <views:RemoteImage Url="{Binding SelectedProduct.ImageUrl}" Height="190" Stretch="UniformToFill" />
-                  <TextBlock Text="{Binding SelectedProduct.Category}" FontSize="12" Foreground="#69716A" />
-                  <TextBlock Text="{Binding SelectedProduct.Name}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
-                  <TextBlock Text="{Binding SelectedPriceText}" FontSize="18" FontWeight="SemiBold" Foreground="#28634E" />
-                  <TextBlock Text="{Binding SelectedArrivalText}" FontSize="13" Foreground="#535A54" />
-                  <TextBlock Text="{Binding SelectedAvailabilityText}" FontSize="13" Foreground="#535A54" />
-                  <TextBlock Text="{Binding SelectedProduct.Description}" FontSize="13" Foreground="#535A54" TextWrapping="Wrap" MaxHeight="170" />
-                  <Separator Margin="0,4" />
-                  <TextBlock Text="Количество" FontSize="13" FontWeight="Medium" />
-                  <NumericUpDown Value="{Binding OrderQuantity}" Minimum="1" Maximum="99" Increment="1" />
-                  <Button Classes="primary" Content="Оформить предзаказ" Command="{Binding PlaceOrderCommand}" IsEnabled="{Binding CanPlaceOrder}" />
-                  <TextBlock Text="Цена фиксируется при оформлении" FontSize="11" Foreground="#69716A" TextWrapping="Wrap" />
+            <Border Grid.Row="2" Classes="surface" Padding="16">
+              <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="22">
+                <StackPanel VerticalAlignment="Center" Spacing="3">
+                  <TextBlock Text="Демо-оформление" FontSize="11" FontWeight="SemiBold" />
+                  <TextBlock Text="Реальная оплата и резерв у продавца не выполняются." FontSize="10" Foreground="#78837A" />
                 </StackPanel>
-              </ScrollViewer>
-              <TextBlock Text="Выберите товар, чтобы посмотреть подробности и оформить предзаказ"
-                         IsVisible="{Binding HasNoSelectedProduct}"
-                         TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20"
-                         Foreground="#69716A" />
-            </Grid>
-          </Border>
-        </Grid>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
+                  <TextBlock Text="Итого" FontSize="10" Foreground="#778279" HorizontalAlignment="Right" />
+                  <TextBlock Text="{Binding CartTotalText}" FontSize="19" FontWeight="SemiBold" Foreground="#234B37" HorizontalAlignment="Right" />
+                </StackPanel>
+                <Button Grid.Column="2" Classes="primary" Content="Оформить предзаказ" Command="{Binding CheckoutCommand}" IsEnabled="{Binding CanCheckout}" VerticalAlignment="Center" />
+              </Grid>
+            </Border>
+          </Grid>
 
-        <Grid IsVisible="{Binding IsOrdersVisible}" RowDefinitions="Auto,*" RowSpacing="14">
-          <TextBlock Text="История ваших предзаказов" FontSize="14" Foreground="#535A54" />
-          <Grid Grid.Row="1">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-              <ItemsControl ItemsSource="{Binding PreOrders}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="domain:PreOrder">
-                    <Border Margin="0,0,0,10" Padding="16" Background="White" BorderBrush="#E0E3DD" BorderThickness="1" CornerRadius="10">
-                      <Grid ColumnDefinitions="*,140,120,Auto" ColumnSpacing="18">
-                        <StackPanel Spacing="4">
-                          <TextBlock Text="{Binding Product.Name}" FontSize="15" FontWeight="Medium" />
-                          <TextBlock Text="{Binding CreatedAtUtc, StringFormat='Оформлен yyyy-MM-dd HH:mm UTC'}" FontSize="12" Foreground="#69716A" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Spacing="4">
-                          <TextBlock Text="Статус" FontSize="11" Foreground="#69716A" />
-                          <TextBlock Text="{Binding StatusDisplayName}" FontSize="13" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="2" Spacing="4">
-                          <TextBlock Text="Количество" FontSize="11" Foreground="#69716A" />
-                          <TextBlock Text="{Binding Quantity}" FontSize="13" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="3" Spacing="4" HorizontalAlignment="Right">
-                          <TextBlock Text="{Binding Total, StringFormat='{}{0:N2} USD'}" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Right" />
-                          <Button Content="Отменить" Classes="secondary" Padding="10,5" HorizontalAlignment="Right"
-                                  IsVisible="{Binding CanCancel}" Tag="{Binding}" Click="OnCancelOrderClick" />
-                        </StackPanel>
-                      </Grid>
-                    </Border>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </ScrollViewer>
-            <TextBlock Text="Предзаказов пока нет" IsVisible="{Binding HasNoOrders}"
-                       HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#69716A" />
+          <!-- Customer-specific preorder history -->
+          <Grid IsVisible="{Binding IsOrdersVisible}" RowDefinitions="Auto,*" RowSpacing="13">
+            <StackPanel Spacing="3">
+              <TextBlock Text="Мои предзаказы" FontSize="17" FontWeight="SemiBold" />
+              <TextBlock Text="Заказы сохранены в локальной базе этого устройства" FontSize="11" Foreground="#778279" />
+            </StackPanel>
+            <Grid Grid.Row="1">
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding PreOrders}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="domain:PreOrder">
+                      <Border Classes="surface" Margin="0,0,0,10" Padding="15">
+                        <Grid ColumnDefinitions="74,*,140,130,Auto" ColumnSpacing="15">
+                          <Border Background="#F2F4F0" CornerRadius="9" ClipToBounds="True" Height="62">
+                            <svg:Svg Path="{Binding Product.ImageAssetPath}" Stretch="UniformToFill" />
+                          </Border>
+                          <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="5">
+                            <TextBlock Text="{Binding Product.Name}" FontSize="14" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding CreatedAtUtc, StringFormat='Предзаказ №{0} · dd.MM.yyyy HH:mm'}" FontSize="10" Foreground="#778279" />
+                          </StackPanel>
+                          <Border Grid.Column="2" Background="#EDF2EC" CornerRadius="7" Padding="9,6" VerticalAlignment="Center" HorizontalAlignment="Left">
+                            <TextBlock Text="{Binding StatusDisplayName}" FontSize="10" Foreground="#526C59" />
+                          </Border>
+                          <StackPanel Grid.Column="3" VerticalAlignment="Center" Spacing="3">
+                            <TextBlock Text="{Binding Quantity, StringFormat='{}{0} шт.'}" FontSize="10" Foreground="#778279" HorizontalAlignment="Right" />
+                            <TextBlock Text="{Binding TotalDisplay}" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Right" />
+                          </StackPanel>
+                          <Button Grid.Column="4" Classes="secondary" Content="Отменить" Tag="{Binding}" Click="OnCancelOrderClick" IsVisible="{Binding CanCancel}" VerticalAlignment="Center" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+              <StackPanel IsVisible="{Binding HasNoOrders}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="11">
+                <svg:Svg Path="/Assets/Icons/receipt.svg" Width="40" Height="40" HorizontalAlignment="Center" />
+                <TextBlock Text="Заказов пока нет" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                <TextBlock Text="Оформленные демо-предзаказы появятся здесь." FontSize="11" Foreground="#778279" HorizontalAlignment="Center" />
+              </StackPanel>
+            </Grid>
           </Grid>
         </Grid>
+
+        <Border Grid.Row="2" Background="#ECEFEA" Padding="32,8" BorderBrush="#DCE2DC" BorderThickness="0,1,0,0">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{Binding Notice}" FontSize="10.5" Foreground="#66736A" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            <TextBlock Grid.Column="1" Text="{Binding LastSyncText}" FontSize="9.5" Foreground="#859086" VerticalAlignment="Center" />
+          </Grid>
+        </Border>
+      </Grid>
+    </Grid>
+
+    <!-- Login and local registration -->
+    <Grid IsVisible="{Binding IsAuthVisible}" ColumnDefinitions="*,450" Margin="64,38,64,38">
+      <Grid Grid.Column="0" RowDefinitions="Auto,Auto,*" Margin="0,50,40,30">
+        <Border Background="#246247" Width="46" Height="46" CornerRadius="12" HorizontalAlignment="Left">
+          <svg:Svg Path="/Assets/Icons/mark.svg" Width="28" Height="28" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <StackPanel Grid.Row="1" Margin="0,26,0,18" Spacing="8">
+          <TextBlock Text="PreOrder Store" FontSize="13" FontWeight="SemiBold" Foreground="#54715E" />
+          <TextBlock Text="Будьте среди первых." FontSize="30" FontWeight="SemiBold" LetterSpacing="-0.65" MaxWidth="500" TextWrapping="Wrap" />
+          <TextBlock Text="Витрина техники, которая только готовится к выходу." FontSize="14" Foreground="#718076" TextWrapping="Wrap" MaxWidth="480" />
+        </StackPanel>
+        <Border Grid.Row="2" Background="#E9EDE8" CornerRadius="18" ClipToBounds="True" MaxHeight="330" VerticalAlignment="Top">
+          <svg:Svg Path="/Assets/Products/iphone-duo.svg" Stretch="UniformToFill" />
+        </Border>
       </Grid>
 
-      <Border Grid.Row="2" Background="#ECEEE9" Padding="28,9" BorderBrush="#DDE0DA" BorderThickness="0,1,0,0">
-        <TextBlock Text="{Binding Notice}" FontSize="12" Foreground="#535A54" />
+      <Border Grid.Column="1" Classes="surface" Padding="30" VerticalAlignment="Center">
+        <StackPanel Spacing="12">
+          <TextBlock Text="РАННИЙ ДОСТУП · ДЕМО" FontSize="10" FontWeight="SemiBold" Foreground="#6F7E72" LetterSpacing="1.1" />
+          <TextBlock Text="{Binding AuthTitle}" FontSize="24" FontWeight="SemiBold" LetterSpacing="-0.35" />
+          <TextBlock Text="Создайте локальный аккаунт или войдите, чтобы сохранить корзину и историю на этом устройстве." FontSize="11" Foreground="#748077" TextWrapping="Wrap" Margin="0,0,0,5" />
+
+          <StackPanel IsVisible="{Binding IsRegisterPanel}" Spacing="6">
+            <TextBlock Classes="form-label" Text="Имя" />
+            <TextBox Text="{Binding DisplayName}" PlaceholderText="Как к вам обращаться" />
+          </StackPanel>
+
+          <StackPanel Spacing="6">
+            <TextBlock Classes="form-label" Text="Электронная почта" />
+            <TextBox Text="{Binding Email}" PlaceholderText="name@example.com" />
+          </StackPanel>
+          <StackPanel Spacing="6">
+            <TextBlock Classes="form-label" Text="Пароль" />
+            <TextBox Text="{Binding Password}" PasswordChar="●" PlaceholderText="Не менее 8 символов" />
+          </StackPanel>
+          <StackPanel IsVisible="{Binding IsRegisterPanel}" Spacing="6">
+            <TextBlock Classes="form-label" Text="Повторите пароль" />
+            <TextBox Text="{Binding PasswordConfirmation}" PasswordChar="●" PlaceholderText="Повторите пароль" />
+          </StackPanel>
+          <TextBlock Classes="muted" Text="Для аккаунта нужен пароль от 8 символов." FontSize="9.5" IsVisible="{Binding IsRegisterPanel}" />
+
+          <Button Classes="primary" IsVisible="{Binding IsSignInPanel}" Command="{Binding SignInCommand}" Content="Войти" HorizontalContentAlignment="Center" Margin="0,7,0,0" />
+          <Button Classes="primary" IsVisible="{Binding IsRegisterPanel}" Command="{Binding RegisterCommand}" Content="Создать аккаунт" HorizontalContentAlignment="Center" Margin="0,7,0,0" />
+          <Button Classes="link" Content="{Binding AuthSwitchText}" Command="{Binding ToggleAuthModeCommand}" HorizontalAlignment="Center" />
+          <TextBlock Text="{Binding Notice}" Classes="notice-error" IsVisible="{Binding HasNotice}" FontSize="10.5" TextWrapping="Wrap" />
+          <Border Background="#F5F3ED" BorderBrush="#E9E4D9" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,4,0,0">
+            <Grid ColumnDefinitions="20,*" ColumnSpacing="7">
+              <svg:Svg Path="/Assets/Icons/info.svg" Width="15" Height="15" VerticalAlignment="Top" />
+              <TextBlock Grid.Column="1" Text="Это учебная офлайн-демонстрация. Пароли хранятся как salted hash в локальной SQLite; вход не проверяет почту и не синхронизируется между устройствами." FontSize="9" Foreground="#716958" TextWrapping="Wrap" LineHeight="14" />
+            </Grid>
+          </Border>
+        </StackPanel>
       </Border>
     </Grid>
   </Grid>

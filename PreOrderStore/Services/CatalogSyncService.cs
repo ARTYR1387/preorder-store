@@ -24,14 +24,15 @@ public sealed class CatalogSyncService(StoreDbContext db, IProductProvider provi
                 product.Description = item.Description;
                 product.Category = item.Category;
                 product.Price = item.Price;
-                product.ImageUrl = item.ImageUrl;
+                product.ImageAssetPath = item.ImageAssetPath;
+                product.ExpectedArrivalDate = item.ExpectedArrivalDate;
                 product.AvailableQuantity = item.AvailableQuantity;
-                product.IsAvailable = item.AvailableQuantity > 0;
+                product.IsAvailable = item.IsAvailable && item.AvailableQuantity > 0;
+                product.IsDemoData = true;
                 product.UpdatedAtUtc = now;
                 continue;
             }
 
-            var numericId = int.TryParse(item.ExternalId, out var parsed) ? parsed : 0;
             db.Products.Add(new Product
             {
                 ExternalId = item.ExternalId,
@@ -39,10 +40,11 @@ public sealed class CatalogSyncService(StoreDbContext db, IProductProvider provi
                 Description = item.Description,
                 Category = item.Category,
                 Price = item.Price,
-                ImageUrl = item.ImageUrl,
+                ImageAssetPath = item.ImageAssetPath,
+                ExpectedArrivalDate = item.ExpectedArrivalDate,
                 AvailableQuantity = item.AvailableQuantity,
-                IsAvailable = item.AvailableQuantity > 0,
-                ExpectedArrivalDate = now.Date.AddDays(14 + Math.Abs(numericId % 28)),
+                IsAvailable = item.IsAvailable && item.AvailableQuantity > 0,
+                IsDemoData = true,
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now
             });

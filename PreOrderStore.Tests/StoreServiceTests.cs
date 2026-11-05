@@ -76,6 +76,44 @@ public sealed class StoreServiceTests
     }
 
     [Fact]
+    public async Task Checkout_CreatesCustomerOrderAtCurrentPriceAndClearsCart()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var product = await fixture.AddProduct(price: 19.95m, stock: 5);
+        var customer = await fixture.AddCustomer("buyer@example.com");
+
+        await fixture.Store.AddToCartAsync(customer.Id, product.Id);
+        await fixture.Store.AddToCartAsync(customer.Id, product.Id);
+        product.Price = 24.50m;
+        await fixture.Db.SaveChangesAsync();
+
+        var orders = await fixture.Store.CheckoutAsync(customer.Id);
+
+        var order = Assert.Single(orders);
+        Assert.Equal(customer.Id, order.CustomerId);
+        Assert.Equal(2, order.Quantity);
+        Assert.Equal(24.50m, order.UnitPriceAtOrder);
+        Assert.Equal(49m, order.Total);
+        Assert.Empty(await fixture.Store.GetCartItemsAsync(customer.Id));
+        Assert.Single(await fixture.Store.GetPreOrdersAsync(customer.Id));
+    }
+
+    [Fact]
+    public async Task Customer_CannotReadOrCancelAnotherCustomersOrder()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var product = await fixture.AddProduct(price: 10m, stock: 2);
+        var buyer = await fixture.AddCustomer("buyer@example.com");
+        var other = await fixture.AddCustomer("other@example.com");
+        await fixture.Store.AddToCartAsync(buyer.Id, product.Id);
+        var order = Assert.Single(await fixture.Store.CheckoutAsync(buyer.Id));
+
+        Assert.Empty(await fixture.Store.GetPreOrdersAsync(other.Id));
+        await Assert.ThrowsAsync<PreOrderException>(() => fixture.Store.CancelPreOrderAsync(order.Id, other.Id));
+        await fixture.Store.CancelPreOrderAsync(order.Id, buyer.Id);
+    }
+
+    [Fact]
     public async Task Synchronization_UpsertsByExternalIdAndNeverDeletesHistoryProduct()
     {
         await using var fixture = await Fixture.CreateAsync();
@@ -83,8 +121,8 @@ public sealed class StoreServiceTests
         var order = await fixture.Store.PlacePreOrderAsync(product.Id, 1);
         var sync = new CatalogSyncService(fixture.Db, new StaticProductProvider(
         [
-            new ProductFeedItem("42", "Updated item", "New description", "books", 12.25m, null, 3),
-            new ProductFeedItem("43", "New item", "Description", "books", 5m, null, 2)
+            new ProductFeedItem("42", "Updated item", "New description", "books", 12.25m, null, null, 3, true),
+            new ProductFeedItem("43", "New item", "Description", "books", 5m, null, null, 2, true)
         ]));
 
         await sync.SynchronizeAsync();
@@ -132,11 +170,23 @@ public sealed class StoreServiceTests
             {
                 ExternalId = "42", Name = "Test product", Description = "Description", Category = "books",
                 Price = price, ExpectedArrivalDate = now.AddDays(14), AvailableQuantity = stock,
-                IsAvailable = stock > 0, CreatedAtUtc = now, UpdatedAtUtc = now
+                IsAvailable = stock > 0, IsDemoData = true, CreatedAtUtc = now, UpdatedAtUtc = now
             };
             Db.Products.Add(product);
             await Db.SaveChangesAsync();
             return product;
+        }
+
+        public async Task<StoreCustomer> AddCustomer(string email)
+        {
+            var customer = new StoreCustomer
+            {
+                DisplayName = "Test Buyer", EmailNormalized = email.ToUpperInvariant(),
+                PasswordSalt = "salt", PasswordHash = "hash", CreatedAtUtc = DateTime.UtcNow
+            };
+            Db.Customers.Add(customer);
+            await Db.SaveChangesAsync();
+            return customer;
         }
 
         public async ValueTask DisposeAsync()
