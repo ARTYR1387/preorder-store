@@ -136,6 +136,60 @@ public sealed class StoreServiceTests
         Assert.Equal(10m, await fixture.Db.PreOrders.Select(x => x.UnitPriceAtOrder).SingleAsync());
     }
 
+    [Fact]
+    public async Task Favorites_AreUniqueAndIsolatedPerCustomer()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var product = await fixture.AddProduct(price: 10m, stock: 2);
+        var first = await fixture.AddCustomer("first@example.com");
+        var second = await fixture.AddCustomer("second@example.com");
+
+        await fixture.Store.SetFavoriteAsync(first.Id, product.Id, true);
+        await fixture.Store.SetFavoriteAsync(first.Id, product.Id, true);
+        await fixture.Store.SetFavoriteAsync(second.Id, product.Id, true);
+
+        Assert.Contains(product.Id, await fixture.Store.GetFavoriteProductIdsAsync(first.Id));
+        Assert.Contains(product.Id, await fixture.Store.GetFavoriteProductIdsAsync(second.Id));
+        Assert.Equal(2, await fixture.Db.Favorites.CountAsync());
+
+        await fixture.Store.SetFavoriteAsync(first.Id, product.Id, false);
+        Assert.DoesNotContain(product.Id, await fixture.Store.GetFavoriteProductIdsAsync(first.Id));
+        Assert.Contains(product.Id, await fixture.Store.GetFavoriteProductIdsAsync(second.Id));
+    }
+
+    [Fact]
+    public async Task LocalProduct_CanBeAddedAndRemovedBeforeItIsReferenced()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+
+        var product = await fixture.Store.CreateLocalProductAsync(
+            "Новая консоль", "gaming", 49990m, 3, "Описание товара", "/Assets/Products/console.svg");
+
+        Assert.True(product.IsLocalProduct);
+        Assert.Equal(49990m, product.Price);
+        await fixture.Store.DeleteLocalProductAsync(product.Id);
+        Assert.DoesNotContain(await fixture.Db.Products.ToListAsync(), x => x.Id == product.Id);
+    }
+
+    [Fact]
+    public async Task DeleteProduct_ProtectsApiItemsAndAnythingInCartOrPurchaseHistory()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var apiProduct = await fixture.AddProduct(price: 10m, stock: 2);
+        await Assert.ThrowsAsync<PreOrderException>(() => fixture.Store.DeleteLocalProductAsync(apiProduct.Id));
+
+        var local = await fixture.Store.CreateLocalProductAsync(
+            "Локальные наушники", "audio", 6500m, 2, "", "/Assets/Products/headphones.svg");
+        var customer = await fixture.AddCustomer("buyer@example.com");
+        await fixture.Store.AddToCartAsync(customer.Id, local.Id);
+        await Assert.ThrowsAsync<PreOrderException>(() => fixture.Store.DeleteLocalProductAsync(local.Id));
+
+        var cartItem = Assert.Single(await fixture.Store.GetCartItemsAsync(customer.Id));
+        await fixture.Store.RemoveFromCartAsync(customer.Id, cartItem.Id);
+        await fixture.Store.PlacePreOrderAsync(local.Id, 1);
+        await Assert.ThrowsAsync<PreOrderException>(() => fixture.Store.DeleteLocalProductAsync(local.Id));
+    }
+
     private sealed class StaticProductProvider(IReadOnlyList<ProductFeedItem> items) : IProductProvider
     {
         public Task<IReadOnlyList<ProductFeedItem>> GetProductsAsync(CancellationToken cancellationToken = default) => Task.FromResult(items);

@@ -75,6 +75,18 @@ public partial class MainWindow : Window
             vm.SelectProductCommand.Execute(product);
     }
 
+    private void OnOpenProductClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { Tag: Product product } && DataContext is MainViewModel vm)
+            vm.OpenProductCommand.Execute(product);
+    }
+
+    private void OnToggleFavoriteClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { Tag: Product product } && DataContext is MainViewModel vm)
+            vm.ToggleFavoriteCommand.Execute(product);
+    }
+
     private void OnAddToCartClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Control { Tag: Product product } && DataContext is MainViewModel vm)

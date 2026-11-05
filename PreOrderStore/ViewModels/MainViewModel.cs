@@ -17,6 +17,8 @@ public partial class MainViewModel : ViewModelBase
     private bool _pendingAuthCheckout;
     private bool _showAuth;
     private string _authReturnSection = "Каталог";
+    private string _productReturnSection = "Каталог";
+    private readonly HashSet<int> _guestFavoriteProductIds = [];
     private static readonly CultureInfo RuCulture = CultureInfo.GetCultureInfo("ru-RU");
 
     public ObservableCollection<Product> Products { get; } = [];
@@ -24,8 +26,9 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<CartItem> CartItems { get; } = [];
     public ObservableCollection<PreOrder> PreOrders { get; } = [];
     public ObservableCollection<string> Categories { get; } = ["Все категории"];
-    public IReadOnlyList<string> AvailabilityOptions { get; } = ["Любой статус", "Предзаказ доступен", "Нет в наличии"];
+    public IReadOnlyList<string> AvailabilityOptions { get; } = ["Любой статус", "В наличии", "Нет в наличии"];
     public IReadOnlyList<string> SortOptions { get; } = ["По популярному каталогу", "По названию", "Сначала дешевле", "Сначала дороже"];
+    public IReadOnlyList<string> ProductIllustrationOptions { get; } = ["Аудио", "Смартфон", "Складной смартфон", "Игровая консоль"];
 
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private string _selectedCategory = "Все категории";
@@ -45,6 +48,15 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private DateTime? _lastSyncUtc;
     [ObservableProperty] private int _cartCount;
     [ObservableProperty] private decimal _cartTotal;
+    [ObservableProperty] private bool _cartCountPulse;
+    [ObservableProperty] private bool _isPageEntering;
+    [ObservableProperty] private string _newProductName = string.Empty;
+    [ObservableProperty] private string _newProductCategory = string.Empty;
+    [ObservableProperty] private string _newProductPrice = string.Empty;
+    [ObservableProperty] private string _newProductStock = "5";
+    [ObservableProperty] private string _newProductDescription = string.Empty;
+    [ObservableProperty] private string _newProductImageUrl = string.Empty;
+    [ObservableProperty] private string _selectedProductIllustration = "Аудио";
 
     public string CurrentUserName => _auth.Session.Customer?.DisplayName ?? "Гость";
     public bool IsAuthenticated => _auth.Session.IsSignedIn;
@@ -52,16 +64,28 @@ public partial class MainViewModel : ViewModelBase
     public bool IsSignInPanel => IsAuthVisible && !IsRegisterMode;
     public bool IsRegisterPanel => IsAuthVisible && IsRegisterMode;
     public bool IsAppVisible => true;
-    public bool IsCatalogVisible => CurrentSection == "Каталог";
+    public bool IsCatalogVisible => CurrentSection is "Каталог" or "Избранное";
     public bool IsCartVisible => CurrentSection == "Корзина";
     public bool IsOrdersVisible => CurrentSection == "Заказы" && IsAuthenticated;
     public bool IsPaymentVisible => CurrentSection == "Оплата";
+    public bool IsProductDetailsVisible => CurrentSection == "Товар";
+    public bool IsManageProductVisible => CurrentSection == "Добавить товар";
     public bool IsGuest => !IsAuthenticated;
     public bool IsAccountButtonVisible => !IsAuthenticated;
     public bool IsSignOutButtonVisible => IsAuthenticated;
     public bool IsCatalogSelected => CurrentSection == "Каталог";
     public bool IsCartSelected => CurrentSection == "Корзина";
     public bool IsOrdersSelected => CurrentSection == "Заказы";
+    public bool IsFavoritesSelected => CurrentSection == "Избранное";
+    public bool IsLocalProductSelected => SelectedProduct?.IsLocalProduct == true;
+    public string CatalogSectionTitle => CurrentSection == "Избранное" ? "Избранное" : "Каталог товаров";
+    public string SelectedProductIllustrationPath => SelectedProductIllustration switch
+    {
+        "Смартфон" => "/Assets/Products/iphone-duo.svg",
+        "Складной смартфон" => "/Assets/Products/fold-phone.svg",
+        "Игровая консоль" => "/Assets/Products/console.svg",
+        _ => "/Assets/Products/headphones.svg"
+    };
     public string AuthTitle => IsRegisterMode ? "Создать аккаунт" : "Войти для покупки";
     public string AuthSwitchText => IsRegisterMode ? "Уже есть аккаунт? Войти" : "Впервые здесь? Создать аккаунт";
     public string HasAccountText => IsAuthenticated ? "Локальный аккаунт" : "Покупка как гость";
@@ -86,6 +110,9 @@ public partial class MainViewModel : ViewModelBase
     public string SelectedAvailabilityText => SelectedProduct is null
         ? string.Empty
         : SelectedProduct.IsAvailable ? $"Есть в наличии: {SelectedProduct.AvailableQuantity} шт." : "Нет в наличии";
+    public string SelectedCartActionText => SelectedProduct is null ? "Добавить в корзину" :
+        CartItems.FirstOrDefault(x => x.ProductId == SelectedProduct.Id) is { Quantity: > 0 } item
+            ? $"В корзине · ещё {item.Quantity} шт." : "Добавить в корзину";
 
     public MainViewModel(StoreService store, CatalogSyncService sync, AuthService auth)
     {
@@ -98,9 +125,11 @@ public partial class MainViewModel : ViewModelBase
     partial void OnSelectedCategoryChanged(string value) => ApplyFilters();
     partial void OnSelectedAvailabilityChanged(string value) => ApplyFilters();
     partial void OnSelectedSortChanged(string value) => ApplyFilters();
+    partial void OnSelectedProductIllustrationChanged(string value) => OnPropertyChanged(nameof(SelectedProductIllustrationPath));
     partial void OnCurrentSectionChanged(string value)
     {
         NotifySections();
+        ApplyFilters();
         if (value == "Корзина") _ = LoadCartAsync();
         if (value == "Заказы") _ = LoadOrdersAsync();
     }
@@ -133,6 +162,8 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(SelectedAvailabilityText));
         OnPropertyChanged(nameof(HasSelectedProduct));
         OnPropertyChanged(nameof(HasNoSelectedProduct));
+        OnPropertyChanged(nameof(IsLocalProductSelected));
+        OnPropertyChanged(nameof(SelectedCartActionText));
     }
 
     public async Task InitializeAsync()
@@ -145,12 +176,126 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void Navigate(string? section)
     {
-        if (section is "Каталог" or "Корзина" || section == "Заказы" && IsAuthenticated)
+        if (section is "Каталог" or "Избранное" or "Корзина" or "Добавить товар" || section == "Заказы" && IsAuthenticated)
             CurrentSection = section;
     }
 
     [RelayCommand]
     private void SelectProduct(Product? product) => SelectedProduct = product;
+
+    [RelayCommand]
+    private async Task OpenProductAsync(Product? product)
+    {
+        if (product is null) return;
+        if (CurrentSection is "Каталог" or "Избранное") _productReturnSection = CurrentSection;
+        SelectedProduct = product;
+        CurrentSection = "Товар";
+        await AnimatePageEntryAsync();
+    }
+
+    [RelayCommand]
+    private async Task BackFromProductAsync()
+    {
+        CurrentSection = _productReturnSection;
+        await AnimatePageEntryAsync();
+    }
+
+    [RelayCommand]
+    private async Task OpenAddProductAsync()
+    {
+        CurrentSection = "Добавить товар";
+        Notice = "Добавьте собственную учебную позицию. Каталог DummyJSON останется без изменений.";
+        await AnimatePageEntryAsync();
+    }
+
+    [RelayCommand]
+    private async Task ToggleFavoriteAsync(Product? product)
+    {
+        if (product is null) return;
+        var next = !product.IsFavorite;
+        product.IsFavorite = next;
+        try
+        {
+            if (IsAuthenticated)
+                await _store.SetFavoriteAsync(_auth.Session.Customer!.Id, product.Id, next);
+            else if (next)
+                _guestFavoriteProductIds.Add(product.Id);
+            else
+                _guestFavoriteProductIds.Remove(product.Id);
+
+            Notice = next ? $"«{product.Name}» добавлен в избранное." : $"«{product.Name}» убран из избранного.";
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            product.IsFavorite = !next;
+            HasError = true;
+            Notice = $"Не удалось обновить избранное: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task CreateLocalProductAsync()
+    {
+        if (!decimal.TryParse(NewProductPrice, NumberStyles.Number, RuCulture, out var price) &&
+            !decimal.TryParse(NewProductPrice, NumberStyles.Number, CultureInfo.InvariantCulture, out price))
+        {
+            HasError = true;
+            Notice = "Введите корректную цену, например 12990 или 12990,50.";
+            return;
+        }
+        if (!int.TryParse(NewProductStock, NumberStyles.Integer, RuCulture, out var stock))
+        {
+            HasError = true;
+            Notice = "Остаток должен быть целым числом.";
+            return;
+        }
+
+        IsBusy = true;
+        HasError = false;
+        try
+        {
+            var product = await _store.CreateLocalProductAsync(
+                NewProductName, NewProductCategory, price, stock, NewProductDescription,
+                string.IsNullOrWhiteSpace(NewProductImageUrl) ? SelectedProductIllustrationPath : NewProductImageUrl.Trim());
+            NewProductName = NewProductCategory = NewProductPrice = NewProductDescription = NewProductImageUrl = string.Empty;
+            NewProductStock = "5";
+            await LoadCatalogAsync();
+            SelectedProduct = Products.FirstOrDefault(x => x.Id == product.Id);
+            _productReturnSection = "Каталог";
+            CurrentSection = "Товар";
+            Notice = $"«{product.Name}» добавлен в локальный каталог.";
+            await AnimatePageEntryAsync();
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            Notice = $"Не удалось добавить товар: {ex.Message}";
+        }
+        finally { IsBusy = false; }
+    }
+
+    [RelayCommand]
+    private async Task DeleteLocalProductAsync()
+    {
+        if (SelectedProduct is not { IsLocalProduct: true } product) return;
+        IsBusy = true;
+        try
+        {
+            await _store.DeleteLocalProductAsync(product.Id);
+            _guestFavoriteProductIds.Remove(product.Id);
+            SelectedProduct = null;
+            await LoadCatalogAsync();
+            CurrentSection = "Каталог";
+            Notice = $"«{product.Name}» удалён из локального каталога.";
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            Notice = ex.Message;
+        }
+        finally { IsBusy = false; }
+    }
 
     [RelayCommand]
     private void OpenAccount()
@@ -222,6 +367,7 @@ public partial class MainViewModel : ViewModelBase
     private void SignOut()
     {
         _auth.Session.SignOut();
+        foreach (var product in Products) product.IsFavorite = _guestFavoriteProductIds.Contains(product.Id);
         CartItems.Clear();
         CartCount = 0;
         CartTotal = 0;
@@ -279,18 +425,19 @@ public partial class MainViewModel : ViewModelBase
             {
                 var existing = CartItems.FirstOrDefault(x => x.ProductId == product.Id);
                 if (existing is null)
-                    CartItems.Add(new CartItem { ProductId = product.Id, Product = product, Quantity = 1 });
+                    CartItems.Add(new CartItem { ProductId = product.Id, Product = product, Quantity = 1, IsEntering = true });
                 else
                 {
                     var reserved = Products.FirstOrDefault(x => x.Id == product.Id)?.AvailableQuantity ?? product.AvailableQuantity;
                     if (existing.Quantity >= reserved) throw new PreOrderException($"Доступно: {reserved} шт.");
                     var index = CartItems.IndexOf(existing);
-                    CartItems[index] = new CartItem { ProductId = product.Id, Product = product, Quantity = existing.Quantity + 1 };
+                    CartItems[index] = new CartItem { ProductId = product.Id, Product = product, Quantity = existing.Quantity + 1, IsEntering = true };
                 }
             }
             Notice = $"«{product.Name}» добавлен в корзину.";
             HasError = false;
-            await LoadCartAsync();
+            await LoadCartAsync(animateProductId: product.Id);
+            await PulseCartCountAsync();
         }
         catch (PreOrderException ex)
         {
@@ -302,17 +449,28 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private async Task RemoveFromCartAsync(CartItem? item)
     {
-        if (item is null) return;
-        if (IsAuthenticated)
-            await _store.RemoveFromCartAsync(_auth.Session.Customer!.Id, item.Id);
-        else if (item.Quantity > 1)
+        if (item is null || item.IsRemoving) return;
+        item.IsRemoving = true;
+        await Task.Delay(200);
+        try
         {
-            var index = CartItems.IndexOf(item);
-            CartItems[index] = new CartItem { ProductId = item.ProductId, Product = item.Product, Quantity = item.Quantity - 1 };
+            if (IsAuthenticated)
+                await _store.RemoveFromCartAsync(_auth.Session.Customer!.Id, item.Id);
+            else if (item.Quantity > 1)
+            {
+                var index = CartItems.IndexOf(item);
+                CartItems[index] = new CartItem { ProductId = item.ProductId, Product = item.Product, Quantity = item.Quantity - 1 };
+            }
+            else
+                CartItems.Remove(item);
+            await LoadCartAsync();
         }
-        else
-            CartItems.Remove(item);
-        await LoadCartAsync();
+        catch (Exception ex)
+        {
+            item.IsRemoving = false;
+            HasError = true;
+            Notice = $"Не удалось изменить корзину: {ex.Message}";
+        }
     }
 
     [RelayCommand]
@@ -393,6 +551,7 @@ public partial class MainViewModel : ViewModelBase
     private async Task EnterStoreAsync()
     {
         var guestItems = CartItems.Where(x => x.CustomerId == 0).Select(x => (x.ProductId, x.Quantity)).ToArray();
+        var guestFavorites = Products.Where(x => x.IsFavorite).Select(x => x.Id).ToArray();
         _showAuth = false;
         Password = PasswordConfirmation = string.Empty;
         NotifyAuthPanels();
@@ -405,7 +564,14 @@ public partial class MainViewModel : ViewModelBase
                 catch (PreOrderException) { break; }
             }
         }
+        foreach (var productId in guestFavorites)
+        {
+            try { await _store.SetFavoriteAsync(_auth.Session.Customer!.Id, productId, true); }
+            catch (PreOrderException) { }
+        }
+        _guestFavoriteProductIds.Clear();
         await LoadCartAsync();
+        await LoadCatalogAsync();
         OnPropertyChanged(nameof(CurrentUserName));
         OnPropertyChanged(nameof(HasAccountText));
         if (_pendingAuthCheckout)
@@ -418,17 +584,32 @@ public partial class MainViewModel : ViewModelBase
             CurrentSection = "Каталог";
     }
 
-    private async Task LoadCartAsync()
+    private async Task LoadCartAsync(int? animateProductId = null)
     {
         if (IsAuthenticated)
         {
             var items = await _store.GetCartItemsAsync(_auth.Session.Customer!.Id);
             CartItems.Clear();
-            foreach (var item in items) CartItems.Add(item);
+            foreach (var item in items)
+            {
+                if (item.ProductId == animateProductId) item.IsEntering = true;
+                CartItems.Add(item);
+            }
         }
         CartCount = CartItems.Sum(x => x.Quantity);
         CartTotal = CartItems.Sum(x => x.Quantity * x.Product.Price);
         OnPropertyChanged(nameof(HasNoCartItems));
+        OnPropertyChanged(nameof(SelectedCartActionText));
+        if (animateProductId is not null)
+        {
+            await Task.Delay(20);
+            var enteringItem = CartItems.FirstOrDefault(x => x.ProductId == animateProductId);
+            if (enteringItem is not null)
+            {
+                await Task.Delay(260);
+                enteringItem.IsEntering = false;
+            }
+        }
     }
 
     private async Task LoadOrdersAsync()
@@ -451,8 +632,15 @@ public partial class MainViewModel : ViewModelBase
     private async Task LoadCatalogAsync()
     {
         var items = await _store.GetProductsAsync();
+        var favoriteIds = IsAuthenticated
+            ? await _store.GetFavoriteProductIdsAsync(_auth.Session.Customer!.Id)
+            : _guestFavoriteProductIds;
         Products.Clear();
-        foreach (var item in items) Products.Add(item);
+        foreach (var item in items)
+        {
+            item.IsFavorite = favoriteIds.Contains(item.Id);
+            Products.Add(item);
+        }
         if (items.Count > 0)
             LastSyncUtc = items.Max(x => x.UpdatedAtUtc);
         if (SelectedProduct is not null)
@@ -469,10 +657,11 @@ public partial class MainViewModel : ViewModelBase
     private void ApplyFilters()
     {
         IEnumerable<Product> query = Products;
+        if (CurrentSection == "Избранное") query = query.Where(x => x.IsFavorite);
         if (!string.IsNullOrWhiteSpace(SearchText))
             query = query.Where(x => x.Name.Contains(SearchText.Trim(), StringComparison.CurrentCultureIgnoreCase));
         if (SelectedCategory != "Все категории") query = query.Where(x => x.Category == SelectedCategory);
-        if (SelectedAvailability == "Предзаказ доступен") query = query.Where(x => x.IsAvailable);
+        if (SelectedAvailability == "В наличии") query = query.Where(x => x.IsAvailable);
         else if (SelectedAvailability == "Нет в наличии") query = query.Where(x => !x.IsAvailable);
         query = SelectedSort switch
         {
@@ -507,9 +696,27 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsCartVisible));
         OnPropertyChanged(nameof(IsOrdersVisible));
         OnPropertyChanged(nameof(IsPaymentVisible));
+        OnPropertyChanged(nameof(IsProductDetailsVisible));
+        OnPropertyChanged(nameof(IsManageProductVisible));
         OnPropertyChanged(nameof(IsCatalogSelected));
         OnPropertyChanged(nameof(IsCartSelected));
         OnPropertyChanged(nameof(IsOrdersSelected));
+        OnPropertyChanged(nameof(IsFavoritesSelected));
+        OnPropertyChanged(nameof(CatalogSectionTitle));
+    }
+
+    private async Task AnimatePageEntryAsync()
+    {
+        IsPageEntering = true;
+        await Task.Delay(16);
+        IsPageEntering = false;
+    }
+
+    private async Task PulseCartCountAsync()
+    {
+        CartCountPulse = true;
+        await Task.Delay(180);
+        CartCountPulse = false;
     }
 
     public static string FormatMoney(decimal value) => value.ToString("N2", RuCulture) + " ₽";

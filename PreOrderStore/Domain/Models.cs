@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Globalization;
 
@@ -21,10 +22,14 @@ public sealed class StoreCustomer
     public DateTime CreatedAtUtc { get; set; }
     public ICollection<PreOrder> PreOrders { get; set; } = new List<PreOrder>();
     public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
+    public ICollection<FavoriteItem> Favorites { get; set; } = new List<FavoriteItem>();
 }
 
-public sealed class Product
+public sealed class Product : INotifyPropertyChanged
 {
+    private bool _isFavorite;
+    public event PropertyChangedEventHandler? PropertyChanged;
+
     public int Id { get; set; }
     public required string ExternalId { get; set; }
     public required string Name { get; set; }
@@ -40,6 +45,7 @@ public sealed class Product
     public DateTime UpdatedAtUtc { get; set; }
     public ICollection<PreOrder> PreOrders { get; set; } = new List<PreOrder>();
     public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
+    public ICollection<FavoriteItem> Favorites { get; set; } = new List<FavoriteItem>();
 
     [NotMapped]
     public string PriceDisplay => Price.ToString("N0", CultureInfo.GetCultureInfo("ru-RU")) + " ₽";
@@ -49,10 +55,37 @@ public sealed class Product
 
     [NotMapped]
     public string ReleaseStateDisplay => IsAvailable ? "В наличии" : "Нет в наличии";
+
+    [NotMapped]
+    public bool IsFavorite
+    {
+        get => _isFavorite;
+        set
+        {
+            if (_isFavorite == value) return;
+            _isFavorite = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsFavorite)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FavoriteIconPath)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FavoriteButtonLabel)));
+        }
+    }
+
+    [NotMapped]
+    public string FavoriteIconPath => IsFavorite ? "/Assets/Icons/heart-filled.svg" : "/Assets/Icons/heart.svg";
+
+    [NotMapped]
+    public string FavoriteButtonLabel => IsFavorite ? "Убрать из избранного" : "В избранное";
+
+    [NotMapped]
+    public bool IsLocalProduct => ExternalId.StartsWith("local-", StringComparison.Ordinal);
 }
 
-public sealed class CartItem
+public sealed class CartItem : INotifyPropertyChanged
 {
+    private bool _isEntering;
+    private bool _isRemoving;
+    public event PropertyChangedEventHandler? PropertyChanged;
+
     public int Id { get; set; }
     public int CustomerId { get; set; }
     public StoreCustomer Customer { get; set; } = null!;
@@ -61,7 +94,30 @@ public sealed class CartItem
     public int Quantity { get; set; }
 
     [NotMapped]
+    public bool IsEntering
+    {
+        get => _isEntering;
+        set { if (_isEntering == value) return; _isEntering = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsEntering))); }
+    }
+
+    [NotMapped]
+    public bool IsRemoving
+    {
+        get => _isRemoving;
+        set { if (_isRemoving == value) return; _isRemoving = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsRemoving))); }
+    }
+
+    [NotMapped]
     public string LineTotalDisplay => (Quantity * Product.Price).ToString("N0", CultureInfo.GetCultureInfo("ru-RU")) + " ₽";
+}
+
+public sealed class FavoriteItem
+{
+    public int Id { get; set; }
+    public int CustomerId { get; set; }
+    public StoreCustomer Customer { get; set; } = null!;
+    public int ProductId { get; set; }
+    public Product Product { get; set; } = null!;
 }
 
 public sealed class PreOrder

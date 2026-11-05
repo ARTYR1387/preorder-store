@@ -187,6 +187,72 @@
       <Setter Property="BorderBrush" Value="{DynamicResource C_9EAF9F}" />
       <Setter Property="RenderTransform" Value="translateY(-2px)" />
     </Style>
+    <Style Selector="Border.cart-count">
+      <Setter Property="RenderTransform" Value="scale(1)" />
+      <Setter Property="Transitions"><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.17" /></Transitions></Setter>
+    </Style>
+    <Style Selector="Border.cart-count.pulse">
+      <Setter Property="RenderTransform" Value="scale(1.18)" />
+    </Style>
+    <Style Selector="Border.cart-row">
+      <Setter Property="Opacity" Value="1" />
+      <Setter Property="RenderTransform" Value="translateY(0px)" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.22" />
+          <BrushTransition Property="BorderBrush" Duration="0:0:0.2" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Border.cart-row.entering">
+      <Setter Property="Opacity" Value="0.08" />
+      <Setter Property="RenderTransform" Value="translateY(12px)" />
+    </Style>
+    <Style Selector="Border.cart-row.removing">
+      <Setter Property="Opacity" Value="0.04" />
+      <Setter Property="RenderTransform" Value="translateY(-7px)" />
+    </Style>
+    <Style Selector="Button.favorite-action">
+      <Setter Property="Background" Value="{DynamicResource C_FFFFFF}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource C_DDE3DD}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="18" />
+      <Setter Property="Width" Value="36" />
+      <Setter Property="Height" Value="36" />
+      <Setter Property="Padding" Value="8" />
+      <Setter Property="RenderTransform" Value="scale(1)" />
+      <Setter Property="Transitions"><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" /><BrushTransition Property="Background" Duration="0:0:0.16" /></Transitions></Setter>
+    </Style>
+    <Style Selector="Button.favorite-action:pointerover">
+      <Setter Property="Background" Value="#FFF5F4" />
+      <Setter Property="RenderTransform" Value="scale(1.09)" />
+    </Style>
+    <Style Selector="Button.favorite-action.liked">
+      <Setter Property="Background" Value="#FFF0EF" />
+      <Setter Property="BorderBrush" Value="#F0D4D1" />
+    </Style>
+    <Style Selector="Button.photo-tap">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="MinHeight" Value="0" />
+    </Style>
+    <Style Selector="Grid.page-content">
+      <Setter Property="Opacity" Value="1" />
+      <Setter Property="RenderTransform" Value="translateY(0px)" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.22" />
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Grid.page-content.page-entering">
+      <Setter Property="Opacity" Value="0.05" />
+      <Setter Property="RenderTransform" Value="translateY(10px)" />
+    </Style>
     <Style Selector="TextBlock.form-label">
       <Setter Property="FontSize" Value="12" />
       <Setter Property="FontWeight" Value="Medium" />
@@ -243,9 +309,21 @@
               <Grid ColumnDefinitions="28,*,Auto" ColumnSpacing="9">
                 <svg:Svg Path="/Assets/Icons/bag.svg" Width="19" Height="19" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="1" Text="Корзина" VerticalAlignment="Center" />
-                <Border Grid.Column="2" Background="{DynamicResource C_DCE8DE}" CornerRadius="8" Padding="7,2" VerticalAlignment="Center">
+                <Border Grid.Column="2" Classes="cart-count" Classes.pulse="{Binding CartCountPulse}" Background="{DynamicResource C_DCE8DE}" CornerRadius="8" Padding="7,2" VerticalAlignment="Center">
                   <TextBlock Text="{Binding CartCount}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource C_365C43}" />
                 </Border>
+              </Grid>
+            </Button>
+            <Button Classes="nav" Classes.active="{Binding IsFavoritesSelected}" Command="{Binding NavigateCommand}" CommandParameter="Избранное">
+              <Grid ColumnDefinitions="28,*" ColumnSpacing="9">
+                <svg:Svg Path="/Assets/Icons/heart-filled.svg" Width="18" Height="18" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="Избранное" VerticalAlignment="Center" />
+              </Grid>
+            </Button>
+            <Button Classes="nav" Command="{Binding OpenAddProductCommand}">
+              <Grid ColumnDefinitions="28,*" ColumnSpacing="9">
+                <svg:Svg Path="/Assets/Icons/plus.svg" Width="18" Height="18" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="Добавить товар" VerticalAlignment="Center" />
               </Grid>
             </Button>
             <Button Classes="nav" IsVisible="{Binding IsAuthenticated}" Classes.active="{Binding IsOrdersSelected}" Command="{Binding NavigateCommand}" CommandParameter="Заказы">
@@ -313,7 +391,7 @@
             <Grid Grid.Column="0" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">
               <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                 <StackPanel Spacing="3">
-                  <TextBlock Text="Каталог товаров" FontSize="16" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding CatalogSectionTitle}" FontSize="16" FontWeight="SemiBold" />
                   <TextBlock Text="Товары из API · показываем локально сохранённый кэш" FontSize="11" Foreground="{DynamicResource C_7A857C}" />
                 </StackPanel>
                 <Border Grid.Column="1" Background="{DynamicResource C_FFFFFF}" BorderBrush="{DynamicResource C_E1E6E0}" BorderThickness="1" CornerRadius="8" Padding="9,6" VerticalAlignment="Center">
@@ -346,14 +424,21 @@
                           <StackPanel Spacing="9">
                             <Grid Height="124">
                               <Border Background="{DynamicResource C_F2F4F0}" CornerRadius="10" ClipToBounds="True">
-                                <views:RemoteImage Url="{Binding ImageAssetPath}" Stretch="UniformToFill" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+                                <Grid>
+                                  <views:RemoteImage Url="{Binding ImageAssetPath}" Stretch="UniformToFill" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" IsVisible="{Binding !IsLocalProduct}" />
+                                  <svg:Svg Path="{Binding ImageAssetPath}" Stretch="Uniform" IsVisible="{Binding IsLocalProduct}" Margin="18" />
+                                </Grid>
                               </Border>
+                              <Button Classes="photo-tap" Tag="{Binding}" Click="OnOpenProductClick" ToolTip.Tip="Открыть товар" />
+                              <Button Classes="favorite-action" Classes.liked="{Binding IsFavorite}" Tag="{Binding}" Click="OnToggleFavoriteClick" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" ToolTip.Tip="{Binding FavoriteButtonLabel}">
+                                <svg:Svg Path="{Binding FavoriteIconPath}" Width="19" Height="19" />
+                              </Button>
                               <Border Classes="release-badge" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8">
                                 <TextBlock Text="{Binding ReleaseStateDisplay}" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource C_365C43}" />
                               </Border>
                             </Grid>
                             <TextBlock Text="{Binding Category}" FontSize="10" FontWeight="Medium" Foreground="{DynamicResource C_7A857C}" />
-                            <Button Classes="link" HorizontalContentAlignment="Left" Padding="0" Tag="{Binding}" Click="OnSelectProductClick">
+                            <Button Classes="link" HorizontalContentAlignment="Left" Padding="0" Tag="{Binding}" Click="OnOpenProductClick">
                               <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" MaxHeight="42" />
                             </Button>
                             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center" Margin="0,2,0,0">
@@ -386,7 +471,10 @@
                   <StackPanel Spacing="13">
                     <Grid Height="166">
                       <Border Background="{DynamicResource C_F2F4F0}" CornerRadius="10" ClipToBounds="True">
-                        <views:RemoteImage Url="{Binding SelectedProduct.ImageAssetPath}" Stretch="UniformToFill" />
+                        <Grid>
+                          <views:RemoteImage Url="{Binding SelectedProduct.ImageAssetPath}" Stretch="UniformToFill" IsVisible="{Binding !SelectedProduct.IsLocalProduct}" />
+                          <svg:Svg Path="{Binding SelectedProduct.ImageAssetPath}" Stretch="Uniform" IsVisible="{Binding SelectedProduct.IsLocalProduct}" Margin="22" />
+                        </Grid>
                       </Border>
                       <Border Classes="release-badge" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="9">
                         <TextBlock Text="{Binding SelectedProduct.ReleaseStateDisplay}" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource C_365C43}" />
@@ -435,10 +523,13 @@
                 <ItemsControl ItemsSource="{Binding CartItems}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="domain:CartItem">
-                      <Border Classes="surface" Margin="0,0,0,10" Padding="12">
+                      <Border Classes="surface cart-row" Classes.entering="{Binding IsEntering}" Classes.removing="{Binding IsRemoving}" Margin="0,0,0,10" Padding="12">
                         <Grid ColumnDefinitions="100,*,Auto,Auto" ColumnSpacing="15">
                           <Border Background="{DynamicResource C_F2F4F0}" CornerRadius="9" ClipToBounds="True" Height="74">
-                            <views:RemoteImage Url="{Binding Product.ImageAssetPath}" Stretch="UniformToFill" />
+                            <Grid>
+                              <views:RemoteImage Url="{Binding Product.ImageAssetPath}" Stretch="UniformToFill" IsVisible="{Binding !Product.IsLocalProduct}" />
+                              <svg:Svg Path="{Binding Product.ImageAssetPath}" Stretch="Uniform" IsVisible="{Binding Product.IsLocalProduct}" Margin="7" />
+                            </Grid>
                           </Border>
                           <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
                             <TextBlock Text="{Binding Product.Name}" FontSize="14" FontWeight="SemiBold" />
@@ -451,7 +542,7 @@
                             </Button>
                             <TextBlock Text="{Binding Quantity}" MinWidth="18" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" />
                             <Button Classes="icon-button" Tag="{Binding Product}" Click="OnAddToCartClick" IsEnabled="{Binding Product.IsAvailable}">
-                              <svg:Svg Path="/Assets/Icons/catalog.svg" Width="15" Height="15" />
+                              <svg:Svg Path="/Assets/Icons/plus.svg" Width="15" Height="15" />
                             </Button>
                           </StackPanel>
                           <TextBlock Grid.Column="3" Text="{Binding LineTotalDisplay}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" MinWidth="110" TextAlignment="Right" />
@@ -541,6 +632,96 @@
                 <TextBlock Text="Покупки из вашего аккаунта появятся здесь." FontSize="11" Foreground="{DynamicResource C_778279}" HorizontalAlignment="Center" />
               </StackPanel>
             </Grid>
+          </Grid>
+
+          <Grid IsVisible="{Binding IsProductDetailsVisible}" Classes="page-content" Classes.page-entering="{Binding IsPageEntering}" ColumnDefinitions="1.05*,*" ColumnSpacing="20">
+            <Border Grid.Column="0" Classes="surface detail-hero" Padding="20" Background="{DynamicResource C_E9EDE8}">
+              <Grid>
+                <Border Background="{DynamicResource C_F2F4F0}" CornerRadius="13" ClipToBounds="True">
+                  <Grid>
+                    <views:RemoteImage Url="{Binding SelectedProduct.ImageAssetPath}" Stretch="UniformToFill" IsVisible="{Binding !SelectedProduct.IsLocalProduct}" />
+                    <svg:Svg Path="{Binding SelectedProduct.ImageAssetPath}" Stretch="Uniform" Margin="52" IsVisible="{Binding SelectedProduct.IsLocalProduct}" />
+                  </Grid>
+                </Border>
+                <Border Classes="release-badge" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="14">
+                  <TextBlock Text="{Binding SelectedProduct.ReleaseStateDisplay}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource C_365C43}" />
+                </Border>
+                <Button Grid.Row="0" Classes="secondary" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="14" Command="{Binding BackFromProductCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="7"><svg:Svg Path="/Assets/Icons/arrow-left.svg" Width="16" Height="16"/><TextBlock Text="Назад в каталог" FontSize="11"/></StackPanel>
+                </Button>
+              </Grid>
+            </Border>
+            <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto" RowSpacing="16" Margin="7,6,4,4">
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding SelectedProduct.Category}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource C_54715E}" LetterSpacing="1" />
+                <TextBlock Text="{Binding SelectedProduct.Name}" FontSize="28" FontWeight="SemiBold" LetterSpacing="-0.5" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding SelectedPriceText}" FontSize="25" FontWeight="SemiBold" Foreground="{DynamicResource C_234B37}" Margin="0,4,0,0" />
+                <TextBlock Text="локальная позиция каталога" FontSize="10" Foreground="{DynamicResource C_778279}" IsVisible="{Binding IsLocalProductSelected}" />
+              </StackPanel>
+              <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="15">
+                  <Border Background="{DynamicResource C_FFFFFF}" BorderBrush="{DynamicResource C_E1E6E0}" BorderThickness="1" CornerRadius="11" Padding="14">
+                    <Grid ColumnDefinitions="24,*" ColumnSpacing="10">
+                      <svg:Svg Path="/Assets/Icons/info.svg" Width="18" Height="18" VerticalAlignment="Top" />
+                      <StackPanel Grid.Column="1" Spacing="5">
+                        <TextBlock Text="О товаре" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding SelectedProduct.Description}" FontSize="11.5" Foreground="{DynamicResource C_66736A}" TextWrapping="Wrap" LineHeight="17" />
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                  <Grid ColumnDefinitions="Auto,*" ColumnSpacing="11">
+                    <Border Background="{DynamicResource C_E4EFE7}" CornerRadius="9" Padding="11,8"><TextBlock Text="{Binding SelectedAvailabilityText}" FontSize="10.5" FontWeight="Medium" Foreground="{DynamicResource C_365C43}" /></Border>
+                    <TextBlock Grid.Column="1" Text="{Binding SelectedArrivalText}" FontSize="10.5" Foreground="{DynamicResource C_778279}" VerticalAlignment="Center" />
+                  </Grid>
+                  <Border Background="{DynamicResource C_F5F3ED}" BorderBrush="{DynamicResource C_E9E4D9}" BorderThickness="1" CornerRadius="9" Padding="12">
+                    <TextBlock Text="Цены и остатки используются для учебной демонстрации. Оплата не списывает деньги." FontSize="10" Foreground="{DynamicResource C_716958}" TextWrapping="Wrap" />
+                  </Border>
+                </StackPanel>
+              </ScrollViewer>
+              <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="9">
+                <Button Classes="primary" Content="{Binding SelectedCartActionText}" Tag="{Binding SelectedProduct}" Click="OnAddToCartClick" IsEnabled="{Binding SelectedProduct.IsAvailable}" HorizontalContentAlignment="Center" />
+                <Button Grid.Column="1" Classes="favorite-action" Classes.liked="{Binding SelectedProduct.IsFavorite}" Tag="{Binding SelectedProduct}" Click="OnToggleFavoriteClick" ToolTip.Tip="{Binding SelectedProduct.FavoriteButtonLabel}">
+                  <svg:Svg Path="{Binding SelectedProduct.FavoriteIconPath}" Width="20" Height="20" />
+                </Button>
+                <Button Grid.Column="2" Classes="icon-button" IsVisible="{Binding IsLocalProductSelected}" Command="{Binding DeleteLocalProductCommand}" ToolTip.Tip="Удалить локальный товар">
+                  <svg:Svg Path="/Assets/Icons/trash.svg" Width="18" Height="18" />
+                </Button>
+              </Grid>
+            </Grid>
+          </Grid>
+
+          <Grid IsVisible="{Binding IsManageProductVisible}" Classes="page-content" Classes.page-entering="{Binding IsPageEntering}" ColumnDefinitions="*,400" ColumnSpacing="20">
+            <Border Classes="surface" Padding="23">
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="14" MaxWidth="670" HorizontalAlignment="Left">
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="Новая позиция" FontSize="21" FontWeight="SemiBold" LetterSpacing="-0.3" />
+                    <TextBlock Text="Добавится только в локальный учебный каталог и не перезапишется синхронизацией DummyJSON." FontSize="11" Foreground="{DynamicResource C_778279}" TextWrapping="Wrap" />
+                  </StackPanel>
+                  <StackPanel Spacing="6"><TextBlock Classes="form-label" Text="Название"/><TextBox Text="{Binding NewProductName}" PlaceholderText="Например, Беспроводные наушники"/></StackPanel>
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Spacing="6"><TextBlock Classes="form-label" Text="Категория"/><TextBox Text="{Binding NewProductCategory}" PlaceholderText="audio, smartphones…"/></StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="6"><TextBlock Classes="form-label" Text="Иллюстрация"/><ComboBox ItemsSource="{Binding ProductIllustrationOptions}" SelectedItem="{Binding SelectedProductIllustration}"/></StackPanel>
+                  </Grid>
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Spacing="6"><TextBlock Classes="form-label" Text="Цена, ₽"/><TextBox Text="{Binding NewProductPrice}" PlaceholderText="12990"/></StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="6"><TextBlock Classes="form-label" Text="Количество"/><TextBox Text="{Binding NewProductStock}" PlaceholderText="5"/></StackPanel>
+                  </Grid>
+                  <StackPanel Spacing="6"><TextBlock Classes="form-label" Text="Описание"/><TextBox Text="{Binding NewProductDescription}" PlaceholderText="Кратко расскажите о товаре" AcceptsReturn="True" MinHeight="92" TextWrapping="Wrap"/></StackPanel>
+                  <StackPanel Spacing="6"><TextBlock Classes="form-label" Text="Ссылка на изображение · необязательно"/><TextBox Text="{Binding NewProductImageUrl}" PlaceholderText="https://… (пусто — выберите иллюстрацию)"/></StackPanel>
+                  <Button Classes="primary" Content="Сохранить в каталог" Command="{Binding CreateLocalProductCommand}" IsEnabled="{Binding !IsBusy}" HorizontalContentAlignment="Center" Margin="0,4,0,0" />
+                </StackPanel>
+              </ScrollViewer>
+            </Border>
+            <Border Grid.Column="1" Classes="surface" Background="{DynamicResource C_E9EDE8}" Padding="20">
+              <StackPanel VerticalAlignment="Center" Spacing="12">
+                <Border Background="{DynamicResource C_F2F4F0}" CornerRadius="14" Height="230" Padding="30">
+                  <svg:Svg Path="{Binding SelectedProductIllustrationPath}" Stretch="Uniform" />
+                </Border>
+                <TextBlock Text="Ваш локальный ассортимент" FontSize="16" FontWeight="SemiBold" />
+                <TextBlock Text="API-товары можно добавлять в корзину и избранное, но удалить из источника DummyJSON нельзя. Удаление доступно для созданных здесь позиций, если они ещё не участвовали в покупке или корзине." FontSize="11" Foreground="{DynamicResource C_6D786F}" TextWrapping="Wrap" LineHeight="16" />
+              </StackPanel>
+            </Border>
           </Grid>
         </Grid>
 

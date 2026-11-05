@@ -8,6 +8,7 @@ public sealed class StoreDbContext(DbContextOptions<StoreDbContext> options) : D
     public DbSet<StoreCustomer> Customers => Set<StoreCustomer>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<CartItem> CartItems => Set<CartItem>();
+    public DbSet<FavoriteItem> Favorites => Set<FavoriteItem>();
     public DbSet<PreOrder> PreOrders => Set<PreOrder>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -49,5 +50,13 @@ public sealed class StoreDbContext(DbContextOptions<StoreDbContext> options) : D
         cart.HasOne(x => x.Product).WithMany(x => x.CartItems)
             .HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
         cart.ToTable(table => table.HasCheckConstraint("CK_CartItems_Quantity_Positive", "Quantity > 0"));
+
+        var favorite = modelBuilder.Entity<FavoriteItem>();
+        favorite.HasKey(x => x.Id);
+        favorite.HasIndex(x => new { x.CustomerId, x.ProductId }).IsUnique();
+        favorite.HasOne(x => x.Customer).WithMany(x => x.Favorites)
+            .HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Cascade);
+        favorite.HasOne(x => x.Product).WithMany(x => x.Favorites)
+            .HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Cascade);
     }
 }

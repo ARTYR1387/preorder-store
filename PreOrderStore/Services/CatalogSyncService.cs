@@ -53,7 +53,7 @@ public sealed class CatalogSyncService(StoreDbContext db, IProductProvider provi
 
         var obsoleteConcepts = await db.Products
             .Where(x => x.ExternalId.StartsWith("demo-") &&
-                        !x.PreOrders.Any() && !x.CartItems.Any())
+                        !x.PreOrders.Any() && !x.CartItems.Any() && !x.Favorites.Any())
             .ToListAsync(cancellationToken);
         db.Products.RemoveRange(obsoleteConcepts);
 

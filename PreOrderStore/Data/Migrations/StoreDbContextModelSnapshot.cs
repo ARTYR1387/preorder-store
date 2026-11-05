@@ -45,6 +45,28 @@ namespace PreOrderStore.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("PreOrderStore.Domain.FavoriteItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("CustomerId", "ProductId")
+                        .IsUnique();
+
+                    b.ToTable("Favorites");
+                });
+
             modelBuilder.Entity("PreOrderStore.Domain.PreOrder", b =>
                 {
                     b.Property<int>("Id")
@@ -202,6 +224,25 @@ namespace PreOrderStore.Data.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("PreOrderStore.Domain.FavoriteItem", b =>
+                {
+                    b.HasOne("PreOrderStore.Domain.StoreCustomer", "Customer")
+                        .WithMany("Favorites")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PreOrderStore.Domain.Product", "Product")
+                        .WithMany("Favorites")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("PreOrderStore.Domain.PreOrder", b =>
                 {
                     b.HasOne("PreOrderStore.Domain.StoreCustomer", "Customer")
@@ -224,12 +265,16 @@ namespace PreOrderStore.Data.Migrations
                 {
                     b.Navigation("CartItems");
 
+                    b.Navigation("Favorites");
+
                     b.Navigation("PreOrders");
                 });
 
             modelBuilder.Entity("PreOrderStore.Domain.StoreCustomer", b =>
                 {
                     b.Navigation("CartItems");
+
+                    b.Navigation("Favorites");
 
                     b.Navigation("PreOrders");
                 });
