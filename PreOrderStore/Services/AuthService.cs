@@ -34,18 +34,22 @@ public sealed class AuthService(StoreDbContext db, UserSession session)
 
         var salt = RandomNumberGenerator.GetBytes(SaltSize);
         var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, Iterations, HashAlgorithmName.SHA256, HashSize);
+        var isFirstAdmin = !await db.Customers.AnyAsync(x => x.IsAdmin, cancellationToken);
         var customer = new StoreCustomer
         {
             DisplayName = name,
             EmailNormalized = normalizedEmail,
             PasswordSalt = Convert.ToBase64String(salt),
             PasswordHash = Convert.ToBase64String(hash),
+            IsAdmin = isFirstAdmin,
             CreatedAtUtc = DateTime.UtcNow
         };
         db.Customers.Add(customer);
         await db.SaveChangesAsync(cancellationToken);
         session.Customer = customer;
-        return new(true, "Аккаунт создан. Добро пожаловать в магазин.");
+        return new(true, isFirstAdmin
+            ? "Создан первый аккаунт с правами администратора этого устройства."
+            : "Аккаунт покупателя создан. Добро пожаловать в магазин.");
     }
 
     public async Task<RegistrationResult> SignInAsync(string email, string password,

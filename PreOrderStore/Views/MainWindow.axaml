@@ -320,7 +320,7 @@
                 <TextBlock Grid.Column="1" Text="Избранное" VerticalAlignment="Center" />
               </Grid>
             </Button>
-            <Button Classes="nav" Command="{Binding OpenAddProductCommand}">
+            <Button Classes="nav" IsVisible="{Binding CanManageProducts}" Command="{Binding OpenAddProductCommand}">
               <Grid ColumnDefinitions="28,*" ColumnSpacing="9">
                 <svg:Svg Path="/Assets/Icons/plus.svg" Width="18" Height="18" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="1" Text="Добавить товар" VerticalAlignment="Center" />
@@ -426,7 +426,7 @@
                             <Grid Height="124">
                               <Border Background="{DynamicResource C_F2F4F0}" CornerRadius="10" ClipToBounds="True">
                                 <Grid>
-                                  <views:RemoteImage Url="{Binding ImageAssetPath}" Stretch="UniformToFill" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" IsVisible="{Binding !IsLocalProduct}" />
+                                  <svg:Svg Path="/Assets/Icons/catalog.svg" Width="42" Height="42" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !IsLocalProduct}" />
                                   <svg:Svg Path="{Binding ImageAssetPath}" Stretch="Uniform" IsVisible="{Binding IsLocalProduct}" Margin="18" />
                                 </Grid>
                               </Border>
@@ -439,8 +439,11 @@
                               </Border>
                             </Grid>
                             <TextBlock Text="{Binding Category}" FontSize="10" FontWeight="Medium" Foreground="{DynamicResource C_7A857C}" />
-                            <Button Classes="link" HorizontalContentAlignment="Left" Padding="0" Tag="{Binding}" Click="OnOpenProductClick">
-                              <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" MaxHeight="42" />
+                            <Button Classes="link" HorizontalContentAlignment="Left" Padding="0" Tag="{Binding}" Click="OnOpenProductClick" ToolTip.Tip="Открыть подробную страницу товара">
+                              <StackPanel Spacing="3">
+                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" MaxHeight="42" />
+                                <TextBlock Text="Подробнее о товаре →" FontSize="10" Foreground="{DynamicResource C_526C59}" />
+                              </StackPanel>
                             </Button>
                             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center" Margin="0,2,0,0">
                               <StackPanel Spacing="2" VerticalAlignment="Center">
@@ -478,7 +481,7 @@
                     <Grid Height="166">
                       <Border Background="{DynamicResource C_F2F4F0}" CornerRadius="10" ClipToBounds="True">
                         <Grid>
-                          <views:RemoteImage Url="{Binding SelectedProduct.ImageAssetPath}" Stretch="UniformToFill" IsVisible="{Binding !SelectedProduct.IsLocalProduct}" />
+                          <svg:Svg Path="/Assets/Icons/catalog.svg" Width="42" Height="42" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !SelectedProduct.IsLocalProduct}" />
                           <svg:Svg Path="{Binding SelectedProduct.ImageAssetPath}" Stretch="Uniform" IsVisible="{Binding SelectedProduct.IsLocalProduct}" Margin="22" />
                         </Grid>
                       </Border>
@@ -533,7 +536,7 @@
                         <Grid ColumnDefinitions="100,*,Auto,Auto" ColumnSpacing="15">
                           <Border Background="{DynamicResource C_F2F4F0}" CornerRadius="9" ClipToBounds="True" Height="74">
                             <Grid>
-                              <views:RemoteImage Url="{Binding Product.ImageAssetPath}" Stretch="UniformToFill" IsVisible="{Binding !Product.IsLocalProduct}" />
+                              <svg:Svg Path="/Assets/Icons/catalog.svg" Width="28" Height="28" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !Product.IsLocalProduct}" />
                               <svg:Svg Path="{Binding Product.ImageAssetPath}" Stretch="Uniform" IsVisible="{Binding Product.IsLocalProduct}" Margin="7" />
                             </Grid>
                           </Border>
@@ -611,7 +614,7 @@
                       <Border Classes="surface" Margin="0,0,0,10" Padding="15">
                         <Grid ColumnDefinitions="74,*,140,130,Auto" ColumnSpacing="15">
                           <Border Background="{DynamicResource C_F2F4F0}" CornerRadius="9" ClipToBounds="True" Height="62">
-                            <views:RemoteImage Url="{Binding Product.ImageAssetPath}" Stretch="UniformToFill" />
+                            <svg:Svg Path="/Assets/Icons/catalog.svg" Width="26" Height="26" HorizontalAlignment="Center" VerticalAlignment="Center" />
                           </Border>
                           <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="5">
                             <TextBlock Text="{Binding Product.Name}" FontSize="14" FontWeight="SemiBold" />

@@ -19,6 +19,7 @@ public sealed class StoreCustomer
     public required string EmailNormalized { get; set; }
     public required string PasswordSalt { get; set; }
     public required string PasswordHash { get; set; }
+    public bool IsAdmin { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public ICollection<PreOrder> PreOrders { get; set; } = new List<PreOrder>();
     public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();

@@ -71,7 +71,7 @@ public partial class MainViewModel : ViewModelBase
     public bool IsOrdersVisible => CurrentSection == "Заказы" && IsAuthenticated;
     public bool IsPaymentVisible => CurrentSection == "Оплата";
     public bool IsProductDetailsVisible => CurrentSection == "Товар";
-    public bool IsManageProductVisible => CurrentSection == "Добавить товар";
+    public bool IsManageProductVisible => CurrentSection == "Добавить товар" && CanManageProducts;
     public bool IsGuest => !IsAuthenticated;
     public bool IsAccountButtonVisible => !IsAuthenticated;
     public bool IsSignOutButtonVisible => IsAuthenticated;
@@ -79,7 +79,8 @@ public partial class MainViewModel : ViewModelBase
     public bool IsCartSelected => CurrentSection == "Корзина";
     public bool IsOrdersSelected => CurrentSection == "Заказы";
     public bool IsFavoritesSelected => CurrentSection == "Избранное";
-    public bool IsLocalProductSelected => SelectedProduct?.IsLocalProduct == true;
+    public bool CanManageProducts => IsAuthenticated && _auth.Session.Customer?.IsAdmin == true;
+    public bool IsLocalProductSelected => SelectedProduct?.IsLocalProduct == true && CanManageProducts;
     public string CatalogSectionTitle => CurrentSection == "Избранное" ? "Избранное" : "Каталог товаров";
     public string SelectedProductIllustrationPath => SelectedProductIllustration switch
     {
@@ -90,7 +91,7 @@ public partial class MainViewModel : ViewModelBase
     };
     public string AuthTitle => IsRegisterMode ? "Создать аккаунт" : "Войти для покупки";
     public string AuthSwitchText => IsRegisterMode ? "Уже есть аккаунт? Войти" : "Впервые здесь? Создать аккаунт";
-    public string HasAccountText => IsAuthenticated ? "Локальный аккаунт" : "Покупка как гость";
+    public string HasAccountText => CanManageProducts ? "Администратор" : IsAuthenticated ? "Покупатель" : "Покупка как гость";
     public string ThemeButtonText => IsDarkTheme ? "Светлая тема" : "Тёмная тема";
     public string ThemeButtonIcon => IsDarkTheme ? "/Assets/Icons/sun.svg" : "/Assets/Icons/moon.svg";
     public ThemeVariant CurrentThemeVariant => IsDarkTheme ? ThemeVariant.Dark : ThemeVariant.Light;
@@ -180,7 +181,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void Navigate(string? section)
     {
-        if (section is "Каталог" or "Избранное" or "Корзина" or "Добавить товар" || section == "Заказы" && IsAuthenticated)
+        if (section is "Каталог" or "Избранное" or "Корзина" || section == "Добавить товар" && CanManageProducts || section == "Заказы" && IsAuthenticated)
             CurrentSection = section;
     }
 
@@ -207,6 +208,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private async Task OpenAddProductAsync()
     {
+        if (!CanManageProducts) return;
         CurrentSection = "Добавить товар";
         Notice = "Добавьте собственную учебную позицию. Каталог DummyJSON останется без изменений.";
         await AnimatePageEntryAsync();
@@ -241,6 +243,12 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private async Task CreateLocalProductAsync()
     {
+        if (!CanManageProducts)
+        {
+            HasError = true;
+            Notice = "Управление каталогом доступно только администратору этого устройства.";
+            return;
+        }
         if (!decimal.TryParse(NewProductPrice, NumberStyles.Number, RuCulture, out var price) &&
             !decimal.TryParse(NewProductPrice, NumberStyles.Number, CultureInfo.InvariantCulture, out price))
         {
@@ -282,6 +290,12 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private async Task DeleteLocalProductAsync()
     {
+        if (!CanManageProducts)
+        {
+            HasError = true;
+            Notice = "Удалять позиции каталога может только администратор этого устройства.";
+            return;
+        }
         if (SelectedProduct is not { IsLocalProduct: true } product) return;
         IsBusy = true;
         try
@@ -698,6 +712,8 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsSignInPanel));
         OnPropertyChanged(nameof(IsRegisterPanel));
         OnPropertyChanged(nameof(IsAuthenticated));
+        OnPropertyChanged(nameof(CanManageProducts));
+        OnPropertyChanged(nameof(IsLocalProductSelected));
         OnPropertyChanged(nameof(IsGuest));
         OnPropertyChanged(nameof(IsAccountButtonVisible));
         OnPropertyChanged(nameof(IsSignOutButtonVisible));
