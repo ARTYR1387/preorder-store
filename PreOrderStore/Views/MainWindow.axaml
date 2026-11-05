@@ -395,7 +395,7 @@
                   <TextBlock Text="Товары из API · показываем локально сохранённый кэш" FontSize="11" Foreground="{DynamicResource C_7A857C}" />
                 </StackPanel>
                 <Border Grid.Column="1" Background="{DynamicResource C_FFFFFF}" BorderBrush="{DynamicResource C_E1E6E0}" BorderThickness="1" CornerRadius="8" Padding="9,6" VerticalAlignment="Center">
-                  <TextBlock Text="{Binding FilteredProducts.Count, StringFormat='{}{0} позиции'}" FontSize="10" Foreground="{DynamicResource C_68746B}" />
+                  <TextBlock Text="{Binding FilteredProductsCountText}" FontSize="10" Foreground="{DynamicResource C_68746B}" />
                 </Border>
               </Grid>
 
@@ -414,6 +414,7 @@
 
               <Grid Grid.Row="3">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                  <StackPanel>
                   <ItemsControl ItemsSource="{Binding FilteredProducts}">
                     <ItemsControl.ItemsPanel>
                       <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
@@ -455,6 +456,11 @@
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
+                  <Button Classes="secondary" Command="{Binding LoadMoreProductsCommand}"
+                          IsVisible="{Binding CanLoadMoreProducts}" HorizontalAlignment="Center" Margin="0,12,0,22">
+                    <TextBlock Text="Показать ещё товары" />
+                  </Button>
+                  </StackPanel>
                 </ScrollViewer>
                 <StackPanel IsVisible="{Binding HasNoProducts}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" MaxWidth="300">
                   <svg:Svg Path="/Assets/Icons/search.svg" Width="34" Height="34" HorizontalAlignment="Center" />

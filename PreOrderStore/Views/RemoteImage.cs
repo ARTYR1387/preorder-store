@@ -13,6 +13,7 @@ public sealed class RemoteImage : Image
 
     private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromSeconds(12) };
     private static readonly ConcurrentDictionary<string, Task<Bitmap?>> Cache = new();
+    private static readonly SemaphoreSlim DownloadSlots = new(4, 4);
     private CancellationTokenSource? _loadCancellation;
 
     public string? Url
@@ -43,15 +44,23 @@ public sealed class RemoteImage : Image
         {
             var task = Cache.GetOrAdd(key, static async address =>
             {
+                await DownloadSlots.WaitAsync().ConfigureAwait(false);
                 try
                 {
-                    var bytes = await Client.GetByteArrayAsync(address);
-                    using var stream = new MemoryStream(bytes);
-                    return new Bitmap(stream);
+                    var bytes = await Client.GetByteArrayAsync(address).ConfigureAwait(false);
+                    return await Task.Run(() =>
+                    {
+                        using var stream = new MemoryStream(bytes);
+                        return new Bitmap(stream);
+                    }).ConfigureAwait(false);
                 }
                 catch
                 {
                     return null;
+                }
+                finally
+                {
+                    DownloadSlots.Release();
                 }
             });
             var bitmap = await task;

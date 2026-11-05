@@ -18,10 +18,12 @@ public partial class MainViewModel : ViewModelBase
     private bool _showAuth;
     private string _authReturnSection = "Каталог";
     private string _productReturnSection = "Каталог";
+    private const int ProductPageSize = 12;
+    private List<Product> _matchingProducts = [];
     private readonly HashSet<int> _guestFavoriteProductIds = [];
     private static readonly CultureInfo RuCulture = CultureInfo.GetCultureInfo("ru-RU");
 
-    public ObservableCollection<Product> Products { get; } = [];
+    public List<Product> Products { get; } = [];
     public ObservableCollection<Product> FilteredProducts { get; } = [];
     public ObservableCollection<CartItem> CartItems { get; } = [];
     public ObservableCollection<PreOrder> PreOrders { get; } = [];
@@ -93,9 +95,11 @@ public partial class MainViewModel : ViewModelBase
     public string ThemeButtonIcon => IsDarkTheme ? "/Assets/Icons/sun.svg" : "/Assets/Icons/moon.svg";
     public ThemeVariant CurrentThemeVariant => IsDarkTheme ? ThemeVariant.Dark : ThemeVariant.Light;
     public bool HasNotice => !string.IsNullOrWhiteSpace(Notice);
-    public bool HasProducts => FilteredProducts.Count > 0;
+    public bool HasProducts => _matchingProducts.Count > 0;
     public bool HasSelectedProduct => SelectedProduct is not null;
     public bool HasNoProducts => !HasProducts;
+    public bool CanLoadMoreProducts => FilteredProducts.Count < _matchingProducts.Count;
+    public string FilteredProductsCountText => FormatProductCount(_matchingProducts.Count);
     public bool HasNoSelectedProduct => !HasSelectedProduct;
     public bool HasNoOrders => PreOrders.Count == 0;
     public bool HasNoCartItems => CartItems.Count == 0;
@@ -670,10 +674,22 @@ public partial class MainViewModel : ViewModelBase
             "Сначала дороже" => query.OrderByDescending(x => x.Price).ThenBy(x => x.Name),
             _ => query.OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
         };
+        _matchingProducts = query.ToList();
         FilteredProducts.Clear();
-        foreach (var product in query) FilteredProducts.Add(product);
+        foreach (var product in _matchingProducts.Take(ProductPageSize)) FilteredProducts.Add(product);
+        OnPropertyChanged(nameof(CanLoadMoreProducts));
+        OnPropertyChanged(nameof(FilteredProductsCountText));
         OnPropertyChanged(nameof(HasProducts));
         OnPropertyChanged(nameof(HasNoProducts));
+    }
+
+    [RelayCommand]
+    private void LoadMoreProducts()
+    {
+        if (!CanLoadMoreProducts) return;
+        foreach (var product in _matchingProducts.Skip(FilteredProducts.Count).Take(ProductPageSize))
+            FilteredProducts.Add(product);
+        OnPropertyChanged(nameof(CanLoadMoreProducts));
     }
 
     private void NotifyAuthPanels()
@@ -720,5 +736,12 @@ public partial class MainViewModel : ViewModelBase
     }
 
     public static string FormatMoney(decimal value) => value.ToString("N2", RuCulture) + " ₽";
+    private static string FormatProductCount(int count)
+    {
+        var lastTwo = count % 100;
+        var last = count % 10;
+        var word = last == 1 && lastTwo != 11 ? "позиция" : last is >= 2 and <= 4 && lastTwo is not (>= 12 and <= 14) ? "позиции" : "позиций";
+        return $"{count} {word}";
+    }
     public static string ArrivalLabel(DateTime? date) => date is null ? "Дата поступления уточняется" : $"Поставка ожидается {date.Value:dd.MM.yyyy}";
 }
