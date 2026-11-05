@@ -1,0 +1,184 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PreOrderStore.ViewModels"
+        xmlns:views="using:PreOrderStore.Views"
+        xmlns:domain="using:PreOrderStore.Domain"
+        x:Class="PreOrderStore.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="PreOrder Store" Width="1360" Height="860" MinWidth="980" MinHeight="640"
+        Background="#F5F5F2" WindowStartupLocation="CenterScreen">
+  <Window.Styles>
+    <Style Selector="TextBlock">
+      <Setter Property="Foreground" Value="#20231F" />
+      <Setter Property="FontFamily" Value="Inter" />
+    </Style>
+    <Style Selector="Button.nav">
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="14,10" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Foreground" Value="#535A54" />
+    </Style>
+    <Style Selector="Button.nav:pointerover">
+      <Setter Property="Background" Value="#E8EBE6" />
+    </Style>
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="#28634E" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="16,10" />
+    </Style>
+    <Style Selector="Button.primary:pointerover">
+      <Setter Property="Background" Value="#1F513F" />
+    </Style>
+    <Style Selector="Button.secondary">
+      <Setter Property="Background" Value="#FFFFFF" />
+      <Setter Property="Foreground" Value="#20231F" />
+      <Setter Property="BorderBrush" Value="#D9DDD7" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="12,8" />
+    </Style>
+    <Style Selector="TextBox, ComboBox, NumericUpDown">
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="MinHeight" Value="38" />
+    </Style>
+  </Window.Styles>
+
+  <Grid ColumnDefinitions="220,*">
+    <Border Grid.Column="0" Background="#ECEEE9" BorderBrush="#DDE0DA" BorderThickness="0,0,1,0">
+      <Grid RowDefinitions="Auto,*,Auto" Margin="20,24,16,16">
+        <StackPanel Spacing="4">
+          <TextBlock Text="PreOrder Store" FontSize="18" FontWeight="SemiBold" />
+          <TextBlock Text="Магазин предзаказов" FontSize="12" Foreground="#69716A" />
+        </StackPanel>
+        <StackPanel Grid.Row="1" Margin="0,32,0,0" Spacing="4">
+          <TextBlock Text="Магазин" FontSize="12" Foreground="#69716A" Margin="12,0,0,8" />
+          <Button Classes="nav" Content="Каталог" Command="{Binding NavigateCommand}" CommandParameter="Каталог" />
+          <Button Classes="nav" Content="Предзаказы" Command="{Binding NavigateCommand}" CommandParameter="Предзаказы" />
+        </StackPanel>
+        <TextBlock Grid.Row="2" Text="Демонстрационный проект&#10;Каталог DummyJSON" FontSize="11" Foreground="#737A74" TextWrapping="Wrap" />
+      </Grid>
+    </Border>
+
+    <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto">
+      <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="28,20,28,16">
+        <StackPanel Spacing="4">
+          <TextBlock Text="{Binding CurrentSection}" FontSize="25" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding LastSyncText}" FontSize="12" Foreground="#69716A" />
+        </StackPanel>
+        <Button Grid.Column="1" Classes="secondary" Content="Обновить каталог" Command="{Binding RefreshCatalogCommand}" VerticalAlignment="Center" />
+      </Grid>
+
+      <Grid Grid.Row="1" Margin="28,0,28,20">
+        <Grid IsVisible="{Binding IsCatalogVisible}" ColumnDefinitions="*,320" ColumnSpacing="20">
+          <Grid Grid.Column="0" RowDefinitions="Auto,*" RowSpacing="16">
+            <Grid ColumnDefinitions="*,150,150,190" ColumnSpacing="10">
+              <TextBox PlaceholderText="Поиск по названию" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+              <ComboBox Grid.Column="1" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" />
+              <ComboBox Grid.Column="2" ItemsSource="{Binding AvailabilityOptions}" SelectedItem="{Binding SelectedAvailability}" />
+              <ComboBox Grid.Column="3" ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSort}" />
+            </Grid>
+            <Grid Grid.Row="1">
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding FilteredProducts}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="domain:Product">
+                      <Border Width="208" Margin="0,0,12,12" Padding="10" Background="White" BorderBrush="#E0E3DD" BorderThickness="1" CornerRadius="12">
+                        <StackPanel Spacing="8">
+                          <views:RemoteImage Url="{Binding ImageUrl}" Height="116" Stretch="UniformToFill" HorizontalAlignment="Stretch" />
+                          <TextBlock Text="{Binding Category}" FontSize="11" Foreground="#69716A" />
+                          <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="Medium" TextWrapping="Wrap" MaxHeight="40" />
+                          <TextBlock Text="{Binding ExpectedArrivalDate, StringFormat='Ожидается dd.MM.yyyy'}" FontSize="11" Foreground="#69716A" />
+                          <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding Price, StringFormat='{}{0:N2} USD'}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Classes="secondary" Content="Подробнее" Padding="9,5"
+                                    Tag="{Binding}" Click="OnSelectProductClick" />
+                          </Grid>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+              <TextBlock Text="Ничего не найдено. Измените запрос или фильтр."
+                         IsVisible="{Binding HasNoProducts}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#69716A" />
+            </Grid>
+          </Grid>
+
+          <Border Grid.Column="1" Background="White" BorderBrush="#E0E3DD" BorderThickness="1" CornerRadius="12" Padding="18">
+            <Grid>
+              <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasSelectedProduct}">
+                <StackPanel Spacing="12">
+                  <views:RemoteImage Url="{Binding SelectedProduct.ImageUrl}" Height="190" Stretch="UniformToFill" />
+                  <TextBlock Text="{Binding SelectedProduct.Category}" FontSize="12" Foreground="#69716A" />
+                  <TextBlock Text="{Binding SelectedProduct.Name}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding SelectedPriceText}" FontSize="18" FontWeight="SemiBold" Foreground="#28634E" />
+                  <TextBlock Text="{Binding SelectedArrivalText}" FontSize="13" Foreground="#535A54" />
+                  <TextBlock Text="{Binding SelectedAvailabilityText}" FontSize="13" Foreground="#535A54" />
+                  <TextBlock Text="{Binding SelectedProduct.Description}" FontSize="13" Foreground="#535A54" TextWrapping="Wrap" MaxHeight="170" />
+                  <Separator Margin="0,4" />
+                  <TextBlock Text="Количество" FontSize="13" FontWeight="Medium" />
+                  <NumericUpDown Value="{Binding OrderQuantity}" Minimum="1" Maximum="99" Increment="1" />
+                  <Button Classes="primary" Content="Оформить предзаказ" Command="{Binding PlaceOrderCommand}" IsEnabled="{Binding CanPlaceOrder}" />
+                  <TextBlock Text="Цена фиксируется при оформлении" FontSize="11" Foreground="#69716A" TextWrapping="Wrap" />
+                </StackPanel>
+              </ScrollViewer>
+              <TextBlock Text="Выберите товар, чтобы посмотреть подробности и оформить предзаказ"
+                         IsVisible="{Binding HasNoSelectedProduct}"
+                         TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20"
+                         Foreground="#69716A" />
+            </Grid>
+          </Border>
+        </Grid>
+
+        <Grid IsVisible="{Binding IsOrdersVisible}" RowDefinitions="Auto,*" RowSpacing="14">
+          <TextBlock Text="История ваших предзаказов" FontSize="14" Foreground="#535A54" />
+          <Grid Grid.Row="1">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <ItemsControl ItemsSource="{Binding PreOrders}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="domain:PreOrder">
+                    <Border Margin="0,0,0,10" Padding="16" Background="White" BorderBrush="#E0E3DD" BorderThickness="1" CornerRadius="10">
+                      <Grid ColumnDefinitions="*,140,120,Auto" ColumnSpacing="18">
+                        <StackPanel Spacing="4">
+                          <TextBlock Text="{Binding Product.Name}" FontSize="15" FontWeight="Medium" />
+                          <TextBlock Text="{Binding CreatedAtUtc, StringFormat='Оформлен yyyy-MM-dd HH:mm UTC'}" FontSize="12" Foreground="#69716A" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="4">
+                          <TextBlock Text="Статус" FontSize="11" Foreground="#69716A" />
+                          <TextBlock Text="{Binding StatusDisplayName}" FontSize="13" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="4">
+                          <TextBlock Text="Количество" FontSize="11" Foreground="#69716A" />
+                          <TextBlock Text="{Binding Quantity}" FontSize="13" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="3" Spacing="4" HorizontalAlignment="Right">
+                          <TextBlock Text="{Binding Total, StringFormat='{}{0:N2} USD'}" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Right" />
+                          <Button Content="Отменить" Classes="secondary" Padding="10,5" HorizontalAlignment="Right"
+                                  IsVisible="{Binding CanCancel}" Tag="{Binding}" Click="OnCancelOrderClick" />
+                        </StackPanel>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+            <TextBlock Text="Предзаказов пока нет" IsVisible="{Binding HasNoOrders}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#69716A" />
+          </Grid>
+        </Grid>
+      </Grid>
+
+      <Border Grid.Row="2" Background="#ECEEE9" Padding="28,9" BorderBrush="#DDE0DA" BorderThickness="0,1,0,0">
+        <TextBlock Text="{Binding Notice}" FontSize="12" Foreground="#535A54" />
+      </Border>
+    </Grid>
+  </Grid>
+</Window>
