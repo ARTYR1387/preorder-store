@@ -57,6 +57,9 @@ namespace PreOrderStore.Data.Migrations
                     b.Property<int?>("CustomerId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsDemoPaid")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("ProductId")
                         .HasColumnType("INTEGER");
 

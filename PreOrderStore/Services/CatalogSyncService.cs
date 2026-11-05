@@ -10,6 +10,7 @@ public sealed class CatalogSyncService(StoreDbContext db, IProductProvider provi
     public async Task<int> SynchronizeAsync(CancellationToken cancellationToken = default)
     {
         var feed = await provider.GetProductsAsync(cancellationToken);
+        if (feed.Count == 0) throw new InvalidDataException("DummyJSON вернул пустой список товаров.");
         var externalIds = feed.Select(x => x.ExternalId).ToArray();
         var existing = await db.Products
             .Where(x => externalIds.Contains(x.ExternalId))
@@ -49,6 +50,12 @@ public sealed class CatalogSyncService(StoreDbContext db, IProductProvider provi
                 UpdatedAtUtc = now
             });
         }
+
+        var obsoleteConcepts = await db.Products
+            .Where(x => x.ExternalId.StartsWith("demo-") &&
+                        !x.PreOrders.Any() && !x.CartItems.Any())
+            .ToListAsync(cancellationToken);
+        db.Products.RemoveRange(obsoleteConcepts);
 
         await db.SaveChangesAsync(cancellationToken);
         return feed.Count;

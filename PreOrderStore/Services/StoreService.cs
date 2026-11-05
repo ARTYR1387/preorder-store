@@ -7,7 +7,7 @@ namespace PreOrderStore.Services;
 public sealed class StoreService(StoreDbContext db)
 {
     public Task<List<Product>> GetProductsAsync(CancellationToken cancellationToken = default) =>
-        db.Products.AsNoTracking().Where(x => x.IsDemoData).OrderBy(x => x.ExpectedArrivalDate == null)
+        db.Products.AsNoTracking().OrderBy(x => x.ExpectedArrivalDate == null)
             .ThenBy(x => x.ExpectedArrivalDate).ThenBy(x => x.Name).ToListAsync(cancellationToken);
 
     public Task<List<PreOrder>> GetPreOrdersAsync(int? customerId = null, CancellationToken cancellationToken = default)
@@ -23,7 +23,7 @@ public sealed class StoreService(StoreDbContext db)
 
     public async Task AddToCartAsync(int customerId, int productId, CancellationToken cancellationToken = default)
     {
-        var product = await db.Products.SingleOrDefaultAsync(x => x.Id == productId && x.IsDemoData, cancellationToken)
+        var product = await db.Products.SingleOrDefaultAsync(x => x.Id == productId, cancellationToken)
             ?? throw new PreOrderException("Новинка не найдена. Обновите каталог.");
         if (!product.IsAvailable || product.AvailableQuantity <= 0)
             throw new PreOrderException("Предзаказ на эту новинку пока не открыт.");
@@ -51,7 +51,7 @@ public sealed class StoreService(StoreDbContext db)
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<PreOrder>> CheckoutAsync(int customerId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PreOrder>> CheckoutAsync(int customerId, bool isDemoPaid = false, CancellationToken cancellationToken = default)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         var cart = await db.CartItems.Include(x => x.Product).Where(x => x.CustomerId == customerId)
@@ -74,7 +74,8 @@ public sealed class StoreService(StoreDbContext db)
             Quantity = item.Quantity,
             UnitPriceAtOrder = item.Product.Price,
             CreatedAtUtc = DateTime.UtcNow,
-            Status = PreOrderStatus.AwaitingConfirmation
+            Status = PreOrderStatus.AwaitingConfirmation,
+            IsDemoPaid = isDemoPaid
         }).ToArray();
         db.PreOrders.AddRange(orders);
         db.CartItems.RemoveRange(cart);

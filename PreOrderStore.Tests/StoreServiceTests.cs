@@ -87,13 +87,14 @@ public sealed class StoreServiceTests
         product.Price = 24.50m;
         await fixture.Db.SaveChangesAsync();
 
-        var orders = await fixture.Store.CheckoutAsync(customer.Id);
+        var orders = await fixture.Store.CheckoutAsync(customer.Id, isDemoPaid: true);
 
         var order = Assert.Single(orders);
         Assert.Equal(customer.Id, order.CustomerId);
         Assert.Equal(2, order.Quantity);
         Assert.Equal(24.50m, order.UnitPriceAtOrder);
         Assert.Equal(49m, order.Total);
+        Assert.True(order.IsDemoPaid);
         Assert.Empty(await fixture.Store.GetCartItemsAsync(customer.Id));
         Assert.Single(await fixture.Store.GetPreOrdersAsync(customer.Id));
     }

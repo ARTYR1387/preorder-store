@@ -48,7 +48,7 @@ public sealed class Product
     public string ArrivalDisplay => ExpectedArrivalDate is null ? "Дата выхода уточняется" : $"Ожидается {ExpectedArrivalDate:dd.MM.yyyy}";
 
     [NotMapped]
-    public string ReleaseStateDisplay => IsAvailable ? "Предзаказ открыт" : "Скоро";
+    public string ReleaseStateDisplay => IsAvailable ? "В наличии" : "Нет в наличии";
 }
 
 public sealed class CartItem
@@ -75,6 +75,7 @@ public sealed class PreOrder
     public decimal UnitPriceAtOrder { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public PreOrderStatus Status { get; set; }
+    public bool IsDemoPaid { get; set; }
 
     [NotMapped]
     public string StatusDisplayName => Status switch
@@ -94,6 +95,9 @@ public sealed class PreOrder
 
     [NotMapped]
     public string TotalDisplay => Total.ToString("N0", CultureInfo.GetCultureInfo("ru-RU")) + " ₽";
+
+    [NotMapped]
+    public string PaymentDisplay => IsDemoPaid ? "Демо-оплачено · без списания" : "Ожидает демо-оплаты";
 }
 
 public sealed record RegistrationResult(bool Succeeded, string Message);
