@@ -461,9 +461,11 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:CatalogProductRow">
-                      <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                      <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
                         <ContentControl Content="{Binding First}" ContentTemplate="{StaticResource ProductCardTemplate}" />
                         <ContentControl Grid.Column="1" Content="{Binding Second}" ContentTemplate="{StaticResource ProductCardTemplate}" IsVisible="{Binding HasSecond}" />
+                        <ContentControl Grid.Column="2" Content="{Binding Third}" ContentTemplate="{StaticResource ProductCardTemplate}" IsVisible="{Binding HasThird}" />
+                        <ContentControl Grid.Column="3" Content="{Binding Fourth}" ContentTemplate="{StaticResource ProductCardTemplate}" IsVisible="{Binding HasFourth}" />
                       </Grid>
                     </DataTemplate>
                     </ItemsControl.ItemTemplate>
@@ -544,6 +546,7 @@
                             <Grid>
                               <svg:Svg Path="/Assets/Icons/catalog.svg" Width="28" Height="28" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !Product.IsLocalProduct}" />
                               <svg:Svg Path="{Binding Product.ImageAssetPath}" Stretch="Uniform" IsVisible="{Binding Product.IsLocalProduct}" Margin="7" />
+                              <views:RemoteImage Url="{Binding Product.ImageAssetPath}" Stretch="UniformToFill" IsVisible="{Binding !Product.IsLocalProduct}" />
                             </Grid>
                           </Border>
                           <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">

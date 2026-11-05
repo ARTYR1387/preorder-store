@@ -887,16 +887,22 @@ public partial class MainViewModel : ViewModelBase
         var start = FilteredProducts.Count;
         var nextPage = _matchingProducts.Skip(start).Take(ProductPageSize).ToArray();
         foreach (var product in nextPage) FilteredProducts.Add(product);
-        for (var index = 0; index < nextPage.Length; index += 2)
-            ProductRows.Add(new CatalogProductRow(nextPage[index], index + 1 < nextPage.Length ? nextPage[index + 1] : null));
+        for (var index = 0; index < nextPage.Length; index += 4)
+            ProductRows.Add(CreateCatalogRow(nextPage, index));
         OnPropertyChanged(nameof(CanLoadMoreProducts));
     }
 
     private void RebuildProductRows()
     {
         ProductRows.Clear();
-        for (var index = 0; index < FilteredProducts.Count; index += 2)
-            ProductRows.Add(new CatalogProductRow(FilteredProducts[index], index + 1 < FilteredProducts.Count ? FilteredProducts[index + 1] : null));
+        for (var index = 0; index < FilteredProducts.Count; index += 4)
+            ProductRows.Add(CreateCatalogRow(FilteredProducts, index));
+    }
+
+    private static CatalogProductRow CreateCatalogRow(IReadOnlyList<Product> products, int index)
+    {
+        Product? At(int offset) => index + offset < products.Count ? products[index + offset] : null;
+        return new CatalogProductRow(products[index], At(1), At(2), At(3));
     }
 
     private void NotifyAuthPanels()
@@ -959,7 +965,9 @@ public partial class MainViewModel : ViewModelBase
 
 public sealed record ProductReviewCard(string ReviewerName, string RatingStars, string Comment, string DateDisplay);
 
-public sealed record CatalogProductRow(Product First, Product? Second)
+public sealed record CatalogProductRow(Product First, Product? Second, Product? Third, Product? Fourth)
 {
     public bool HasSecond => Second is not null;
+    public bool HasThird => Third is not null;
+    public bool HasFourth => Fourth is not null;
 }
