@@ -110,8 +110,96 @@ public partial class MainWindow : Window
 
     private void OnAddToCartClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is Control { Tag: Product product } && DataContext is MainViewModel vm)
+        if (sender is Control button && button.Tag is Product product && DataContext is MainViewModel vm)
+        {
+            _ = AnimateProductToCartAsync(button, product);
             vm.AddToCartCommand.Execute(product);
+        }
+    }
+
+    private void OnToggleCartClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Control button || button.Tag is not Product product || DataContext is not MainViewModel vm) return;
+        if (product.CartQuantity > 0)
+        {
+            vm.RemoveProductFromCartCommand.Execute(product);
+            return;
+        }
+        _ = AnimateProductToCartAsync(button, product);
+        vm.AddToCartCommand.Execute(product);
+    }
+
+    private async Task AnimateProductToCartAsync(Control origin, Product product)
+    {
+        if (FlyOverlay is null || CartNavigationButton is null || origin.Bounds.Width <= 0) return;
+        var start = origin.TranslatePoint(new Point(origin.Bounds.Width / 2, origin.Bounds.Height / 2), FlyOverlay);
+        var target = CartNavigationButton.TranslatePoint(new Point(CartNavigationButton.Bounds.Width / 2, CartNavigationButton.Bounds.Height / 2), FlyOverlay);
+        if (start is null || target is null) return;
+
+        var initials = product.Name.Trim();
+        var badge = new Border
+        {
+            Width = 28,
+            Height = 28,
+            CornerRadius = new CornerRadius(8),
+            Background = new SolidColorBrush(Color.Parse("#FFFFFF")),
+            Child = new TextBlock
+            {
+                Text = initials.Length == 0 ? "+" : initials[..1].ToUpperInvariant(),
+                Foreground = new SolidColorBrush(Color.Parse("#234B37")),
+                FontSize = 12,
+                FontWeight = Avalonia.Media.FontWeight.Bold,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+            }
+        };
+        var content = new Grid { ColumnDefinitions = new ColumnDefinitions("28,*"), ColumnSpacing = 8, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
+        content.Children.Add(badge);
+        var title = new TextBlock
+        {
+            Text = product.Name,
+            Foreground = Brushes.White,
+            FontSize = 10,
+            FontWeight = Avalonia.Media.FontWeight.SemiBold,
+            TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+        };
+        Grid.SetColumn(title, 1);
+        content.Children.Add(title);
+        var flight = new Border
+        {
+            Width = 146,
+            Height = 44,
+            Padding = new Thickness(7, 5),
+            CornerRadius = new CornerRadius(11),
+            Background = new SolidColorBrush(Color.Parse("#234B37")),
+            BorderBrush = new SolidColorBrush(Color.Parse("#FFFFFF")),
+            BorderThickness = new Thickness(1),
+            Opacity = 0,
+            Child = content
+        };
+        FlyOverlay.Children.Add(flight);
+        try
+        {
+            const int frames = 22;
+            for (var frame = 0; frame <= frames; frame++)
+            {
+                var progress = frame / (double)frames;
+                var eased = 1 - Math.Pow(1 - progress, 3);
+                var x = start.Value.X + (target.Value.X - start.Value.X) * eased;
+                var y = start.Value.Y + (target.Value.Y - start.Value.Y) * eased - Math.Sin(progress * Math.PI) * 34;
+                Canvas.SetLeft(flight, x - flight.Width / 2);
+                Canvas.SetTop(flight, y - flight.Height / 2);
+                flight.Opacity = Math.Min(1, progress * 5) * Math.Min(1, (1 - progress) * 4);
+                var scale = 1 - eased * 0.28;
+                flight.RenderTransform = new ScaleTransform(scale, scale);
+                await Task.Delay(15);
+            }
+        }
+        finally
+        {
+            FlyOverlay.Children.Remove(flight);
+        }
     }
 
     private void OnIncrementCartClick(object? sender, RoutedEventArgs e)
@@ -124,6 +212,18 @@ public partial class MainWindow : Window
     {
         if (sender is Control { Tag: CartItem item } && DataContext is MainViewModel vm)
             vm.RemoveFromCartCommand.Execute(item);
+    }
+
+    private void OnRemoveProductFromCartClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { Tag: Product product } && DataContext is MainViewModel vm)
+            vm.RemoveProductFromCartCommand.Execute(product);
+    }
+
+    private void OnDeleteCartItemClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { Tag: CartItem item } && DataContext is MainViewModel vm)
+            vm.RemoveCartItemCompletelyCommand.Execute(item);
     }
 
     private void OnCancelOrderClick(object? sender, RoutedEventArgs e)

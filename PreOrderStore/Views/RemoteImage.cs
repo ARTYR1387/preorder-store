@@ -13,7 +13,7 @@ public sealed class RemoteImage : Image
 
     private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromSeconds(12) };
     private static readonly ConcurrentDictionary<string, Task<Bitmap?>> Cache = new();
-    private static readonly SemaphoreSlim DownloadSlots = new(4, 4);
+    private static readonly SemaphoreSlim DownloadSlots = new(2, 2);
     private CancellationTokenSource? _loadCancellation;
 
     public string? Url

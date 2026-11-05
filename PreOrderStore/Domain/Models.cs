@@ -29,6 +29,7 @@ public sealed class StoreCustomer
 public sealed class Product : INotifyPropertyChanged
 {
     private bool _isFavorite;
+    private int _cartQuantity;
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public int Id { get; set; }
@@ -70,6 +71,34 @@ public sealed class Product : INotifyPropertyChanged
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FavoriteButtonLabel)));
         }
     }
+
+    [NotMapped]
+    public int CartQuantity
+    {
+        get => _cartQuantity;
+        set
+        {
+            if (_cartQuantity == value) return;
+            _cartQuantity = Math.Max(0, value);
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CartQuantity)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsInCart)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CartActionIconPath)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CartActionTooltip)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CartActionEnabled)));
+        }
+    }
+
+    [NotMapped]
+    public bool IsInCart => CartQuantity > 0;
+
+    [NotMapped]
+    public string CartActionIconPath => IsInCart ? "/Assets/Icons/minus.svg" : "/Assets/Icons/plus.svg";
+
+    [NotMapped]
+    public string CartActionTooltip => IsInCart ? "Убрать один товар из корзины" : "Добавить в корзину";
+
+    [NotMapped]
+    public bool CartActionEnabled => IsInCart || IsAvailable;
 
     [NotMapped]
     public string FavoriteIconPath => IsFavorite ? "/Assets/Icons/heart-filled.svg" : "/Assets/Icons/heart.svg";
@@ -184,7 +213,7 @@ public sealed class PreOrder
     public string TotalDisplay => Total.ToString("N0", CultureInfo.GetCultureInfo("ru-RU")) + " ₽";
 
     [NotMapped]
-    public string PaymentDisplay => IsDemoPaid ? "Демо-оплачено · без списания" : "Ожидает демо-оплаты";
+    public string PaymentDisplay => "Оплата не подтверждена";
 }
 
 public sealed record RegistrationResult(bool Succeeded, string Message);

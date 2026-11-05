@@ -76,7 +76,7 @@ public sealed class StoreServiceTests
     }
 
     [Fact]
-    public async Task Checkout_CreatesCustomerOrderAtCurrentPriceAndClearsCart()
+    public async Task Checkout_CreatesPendingCustomerOrderAndClearsCartWithoutMarkingItPaid()
     {
         await using var fixture = await Fixture.CreateAsync();
         var product = await fixture.AddProduct(price: 19.95m, stock: 5);
@@ -87,14 +87,14 @@ public sealed class StoreServiceTests
         product.Price = 24.50m;
         await fixture.Db.SaveChangesAsync();
 
-        var orders = await fixture.Store.CheckoutAsync(customer.Id, isDemoPaid: true);
+        var orders = await fixture.Store.CheckoutAsync(customer.Id);
 
         var order = Assert.Single(orders);
         Assert.Equal(customer.Id, order.CustomerId);
         Assert.Equal(2, order.Quantity);
         Assert.Equal(24.50m, order.UnitPriceAtOrder);
         Assert.Equal(49m, order.Total);
-        Assert.True(order.IsDemoPaid);
+        Assert.False(order.IsDemoPaid);
         Assert.Empty(await fixture.Store.GetCartItemsAsync(customer.Id));
         Assert.Single(await fixture.Store.GetPreOrdersAsync(customer.Id));
     }
@@ -188,6 +188,37 @@ public sealed class StoreServiceTests
         await fixture.Store.RemoveFromCartAsync(customer.Id, cartItem.Id);
         await fixture.Store.PlacePreOrderAsync(local.Id, 1);
         await Assert.ThrowsAsync<PreOrderException>(() => fixture.Store.DeleteLocalProductAsync(local.Id));
+    }
+
+    [Fact]
+    public async Task RemoveCartItemCompletely_DeletesTheWholeLineRegardlessOfQuantity()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var product = await fixture.AddProduct(price: 10m, stock: 5);
+        var customer = await fixture.AddCustomer("buyer@example.com");
+        await fixture.Store.AddToCartAsync(customer.Id, product.Id);
+        await fixture.Store.AddToCartAsync(customer.Id, product.Id);
+        var item = Assert.Single(await fixture.Store.GetCartItemsAsync(customer.Id));
+
+        await fixture.Store.RemoveCartItemCompletelyAsync(customer.Id, item.Id);
+
+        Assert.Empty(await fixture.Store.GetCartItemsAsync(customer.Id));
+    }
+
+    [Fact]
+    public async Task ClearCart_RemovesOnlyTheSpecifiedCustomersCart()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var product = await fixture.AddProduct(price: 10m, stock: 5);
+        var first = await fixture.AddCustomer("first@example.com");
+        var second = await fixture.AddCustomer("second@example.com");
+        await fixture.Store.AddToCartAsync(first.Id, product.Id);
+        await fixture.Store.AddToCartAsync(second.Id, product.Id);
+
+        await fixture.Store.ClearCartAsync(first.Id);
+
+        Assert.Empty(await fixture.Store.GetCartItemsAsync(first.Id));
+        Assert.Single(await fixture.Store.GetCartItemsAsync(second.Id));
     }
 
     private sealed class StaticProductProvider(IReadOnlyList<ProductFeedItem> items) : IProductProvider

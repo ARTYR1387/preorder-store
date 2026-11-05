@@ -283,15 +283,10 @@
       <Setter Property="CornerRadius" Value="7" />
       <Setter Property="Padding" Value="8,4" />
     </Style>
-    <Style Selector="Border.demo-badge">
-      <Setter Property="Background" Value="{DynamicResource C_F1ECE2}" />
-      <Setter Property="CornerRadius" Value="6" />
-      <Setter Property="Padding" Value="7,3" />
-    </Style>
   </Window.Styles>
 
   <Grid Background="{DynamicResource C_F4F5F1}">
-    <!-- Signed-in store shell -->
+    <!-- Store shell -->
     <Grid IsVisible="{Binding IsAppVisible}" ColumnDefinitions="232,*">
       <Border Grid.Column="0" Background="{DynamicResource C_E9EDE8}" BorderBrush="{DynamicResource C_DCE2DC}" BorderThickness="0,0,1,0">
         <Grid RowDefinitions="Auto,*,Auto" Margin="17,22,15,16">
@@ -313,7 +308,7 @@
                 <TextBlock Grid.Column="1" Text="Каталог" VerticalAlignment="Center" />
               </Grid>
             </Button>
-            <Button Classes="nav" Classes.active="{Binding IsCartSelected}" Command="{Binding NavigateCommand}" CommandParameter="Корзина">
+            <Button x:Name="CartNavigationButton" Classes="nav" Classes.active="{Binding IsCartSelected}" Command="{Binding NavigateCommand}" CommandParameter="Корзина">
               <Grid ColumnDefinitions="28,*,Auto" ColumnSpacing="9">
                 <svg:Svg Path="/Assets/Icons/bag.svg" Width="19" Height="19" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="1" Text="Корзина" VerticalAlignment="Center" />
@@ -341,15 +336,6 @@
               </Grid>
             </Button>
 
-            <Border Background="{DynamicResource C_F3F5F1}" CornerRadius="10" Padding="11" Margin="3,22,3,0">
-              <Grid ColumnDefinitions="24,*" ColumnSpacing="8">
-                <svg:Svg Path="/Assets/Icons/info.svg" Width="18" Height="18" VerticalAlignment="Top" Margin="0,2,0,0" />
-                <StackPanel Grid.Column="1" Spacing="4">
-                  <TextBlock Text="Демо-витрина" FontSize="12" FontWeight="SemiBold" />
-                  <TextBlock Text="Источник: DummyJSON. API — учебный. Оплата только имитация; покупки и поставки реальных товаров нет." FontSize="10.5" Foreground="{DynamicResource C_737F75}" TextWrapping="Wrap" LineHeight="15" />
-                </StackPanel>
-              </Grid>
-            </Border>
           </StackPanel>
 
           <Border Grid.Row="2" Background="{DynamicResource C_F3F5F1}" CornerRadius="12" Padding="11">
@@ -373,19 +359,15 @@
       </Border>
 
       <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto">
-        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="9" Margin="32,22,32,18">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="9" Margin="32,22,32,18">
           <StackPanel VerticalAlignment="Center" Spacing="3">
             <TextBlock Text="{Binding CurrentSection}" FontSize="24" FontWeight="SemiBold" LetterSpacing="-0.4" />
-            <TextBlock Text="DummyJSON · каталог хранится в SQLite" FontSize="12" Foreground="{DynamicResource C_718076}" />
           </StackPanel>
-          <Border Grid.Column="1" Classes="demo-badge" VerticalAlignment="Center">
-            <TextBlock Text="API · RUB ДЕМО" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource C_695A3D}" LetterSpacing="0.6" />
-          </Border>
-          <Button Grid.Column="2" Classes="secondary" Command="{Binding ToggleThemeCommand}" VerticalAlignment="Center">
+          <Button Grid.Column="1" Classes="secondary" Command="{Binding ToggleThemeCommand}" VerticalAlignment="Center">
             <StackPanel Orientation="Horizontal" Spacing="6"><svg:Svg Path="{Binding ThemeButtonIcon}" Width="16" Height="16"/><TextBlock Text="{Binding ThemeButtonText}" FontSize="11"/></StackPanel>
           </Button>
-          <Button Grid.Column="3" Classes="secondary" Command="{Binding OpenAccountCommand}" Content="Войти" VerticalAlignment="Center" IsVisible="{Binding IsAccountButtonVisible}"/>
-          <Button Grid.Column="4" Classes="secondary" Command="{Binding RefreshCatalogCommand}" VerticalAlignment="Center" IsEnabled="{Binding !IsBusy}">
+          <Button Grid.Column="2" Classes="secondary" Command="{Binding OpenAccountCommand}" Content="Войти" VerticalAlignment="Center" IsVisible="{Binding IsAccountButtonVisible}"/>
+          <Button Grid.Column="3" Classes="secondary" Command="{Binding RefreshCatalogCommand}" VerticalAlignment="Center" IsEnabled="{Binding !IsBusy}">
             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
               <svg:Svg Path="/Assets/Icons/refresh.svg" Width="17" Height="17" />
               <TextBlock Text="Обновить товары" FontSize="12" />
@@ -400,7 +382,6 @@
               <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                 <StackPanel Spacing="3">
                   <TextBlock Text="{Binding CatalogSectionTitle}" FontSize="16" FontWeight="SemiBold" />
-                  <TextBlock Text="Товары из API · показываем локально сохранённый кэш" FontSize="11" Foreground="{DynamicResource C_7A857C}" />
                 </StackPanel>
                 <Border Grid.Column="1" Background="{DynamicResource C_FFFFFF}" BorderBrush="{DynamicResource C_E1E6E0}" BorderThickness="1" CornerRadius="8" Padding="9,6" VerticalAlignment="Center">
                   <TextBlock Text="{Binding FilteredProductsCountText}" FontSize="10" Foreground="{DynamicResource C_68746B}" />
@@ -459,8 +440,8 @@
                                 <TextBlock Text="{Binding PriceDisplay}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource C_234B37}" />
                                 <TextBlock Text="{Binding ArrivalDisplay}" FontSize="9.5" Foreground="{DynamicResource C_78847A}" />
                               </StackPanel>
-                              <Button Grid.Column="1" Classes="primary" Tag="{Binding}" Click="OnAddToCartClick" IsEnabled="{Binding IsAvailable}" Padding="9,7" ToolTip.Tip="Добавить в корзину">
-                                <svg:Svg Path="/Assets/Icons/plus.svg" Width="17" Height="17" />
+                              <Button Grid.Column="1" Classes="primary" Tag="{Binding}" Click="OnToggleCartClick" IsEnabled="{Binding CartActionEnabled}" Padding="9,7" ToolTip.Tip="{Binding CartActionTooltip}">
+                                <svg:Svg Path="{Binding CartActionIconPath}" Width="17" Height="17" />
                               </Button>
                             </Grid>
                           </StackPanel>
@@ -498,7 +479,7 @@
                         <TextBlock Text="{Binding SelectedProduct.ReleaseStateDisplay}" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource C_365C43}" />
                       </Border>
                     </Grid>
-                    <TextBlock Text="{Binding SelectedProduct.Category}" FontSize="10" FontWeight="Medium" Foreground="{DynamicResource C_7A857C}" />
+                    <TextBlock Text="{Binding SelectedProduct.CategoryDisplay}" FontSize="10" FontWeight="Medium" Foreground="{DynamicResource C_7A857C}" />
                     <TextBlock Text="{Binding SelectedProduct.Name}" FontSize="19" FontWeight="SemiBold" TextWrapping="Wrap" />
                     <TextBlock Text="{Binding SelectedPriceText}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource C_234B37}" />
                     <Grid ColumnDefinitions="22,*" ColumnSpacing="7">
@@ -510,7 +491,7 @@
                     <Border Background="{DynamicResource C_F5F3ED}" BorderBrush="{DynamicResource C_E9E4D9}" BorderThickness="1" CornerRadius="9" Padding="10">
                       <Grid ColumnDefinitions="22,*" ColumnSpacing="6">
                         <svg:Svg Path="/Assets/Icons/info.svg" Width="16" Height="16" VerticalAlignment="Top" />
-                        <TextBlock Grid.Column="1" Text="Учебный каталог DummyJSON. Пересчёт цены из условных единиц в рубли постоянный, не по курсу. Оплата демонстрационная." FontSize="9.5" Foreground="{DynamicResource C_6F6655}" TextWrapping="Wrap" LineHeight="14" />
+                        <TextBlock Grid.Column="1" Text="Цены и наличие указаны для ориентира и требуют подтверждения перед оформлением." FontSize="9.5" Foreground="{DynamicResource C_6F6655}" TextWrapping="Wrap" LineHeight="14" />
                       </Grid>
                     </Border>
                     <Button Classes="primary" Content="Добавить в корзину" Tag="{Binding SelectedProduct}" Click="OnAddToCartClick" IsEnabled="{Binding SelectedProduct.IsAvailable}" HorizontalContentAlignment="Center" />
@@ -519,7 +500,7 @@
                 <StackPanel IsVisible="{Binding HasNoSelectedProduct}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="11" MaxWidth="210">
                   <svg:Svg Path="/Assets/Icons/catalog.svg" Width="31" Height="31" HorizontalAlignment="Center" />
                   <TextBlock Text="Выберите товар" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                  <TextBlock Text="Здесь появятся описание и условия учебной покупки." FontSize="10.5" Foreground="{DynamicResource C_778279}" TextWrapping="Wrap" TextAlignment="Center" />
+                  <TextBlock Text="Здесь появятся описание и доступные действия." FontSize="10.5" Foreground="{DynamicResource C_778279}" TextWrapping="Wrap" TextAlignment="Center" />
                 </StackPanel>
               </Grid>
             </Border>
@@ -530,11 +511,9 @@
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Spacing="3">
                 <TextBlock Text="Ваша корзина" FontSize="17" FontWeight="SemiBold" />
-                <TextBlock Text="В корзине можно подготовить покупку гостем; вход потребуется только для оплаты" FontSize="11" Foreground="{DynamicResource C_778279}" />
+                <TextBlock Text="Изменяйте количество или удаляйте товары прямо здесь" FontSize="11" Foreground="{DynamicResource C_778279}" />
               </StackPanel>
-              <Border Grid.Column="1" Classes="demo-badge" VerticalAlignment="Center">
-                <TextBlock Text="ОПЛАТА · ДЕМО" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource C_695A3D}" />
-              </Border>
+              <Button Grid.Column="1" Classes="secondary" Content="Очистить корзину" Command="{Binding ClearCartCommand}" IsEnabled="{Binding CanClearCart}" VerticalAlignment="Center" />
             </Grid>
             <Grid Grid.Row="1">
               <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -542,7 +521,7 @@
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="domain:CartItem">
                       <Border Classes="surface cart-row" Classes.entering="{Binding IsEntering}" Classes.removing="{Binding IsRemoving}" Margin="0,0,0,10" Padding="12">
-                        <Grid ColumnDefinitions="100,*,Auto,Auto" ColumnSpacing="15">
+                        <Grid ColumnDefinitions="100,*,Auto,Auto,Auto" ColumnSpacing="12">
                           <Border Background="{DynamicResource C_F2F4F0}" CornerRadius="9" ClipToBounds="True" Height="74">
                             <Grid>
                               <svg:Svg Path="/Assets/Icons/catalog.svg" Width="28" Height="28" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !Product.IsLocalProduct}" />
@@ -564,6 +543,9 @@
                             </Button>
                           </StackPanel>
                           <TextBlock Grid.Column="3" Text="{Binding LineTotalDisplay}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" MinWidth="110" TextAlignment="Right" />
+                          <Button Grid.Column="4" Classes="icon-button" Tag="{Binding}" Click="OnDeleteCartItemClick" ToolTip.Tip="Удалить товар целиком" VerticalAlignment="Center">
+                            <svg:Svg Path="/Assets/Icons/trash.svg" Width="15" Height="15" />
+                          </Button>
                         </Grid>
                       </Border>
                     </DataTemplate>
@@ -580,8 +562,8 @@
             <Border Grid.Row="2" Classes="surface" Padding="16">
               <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="22">
                 <StackPanel VerticalAlignment="Center" Spacing="3">
-                  <TextBlock Text="Покупка без реального списания" FontSize="11" FontWeight="SemiBold" />
-                  <TextBlock Text="Нажмите оформить: авторизуйтесь только сейчас, затем проведите демо-оплату." FontSize="10" Foreground="{DynamicResource C_78837A}" />
+                  <TextBlock Text="Оплата пока не подключена" FontSize="11" FontWeight="SemiBold" />
+                  <TextBlock Text="Корзина сохранится; платёжный этап добавим отдельно." FontSize="10" Foreground="{DynamicResource C_78837A}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
                   <TextBlock Text="Итого" FontSize="10" Foreground="{DynamicResource C_778279}" HorizontalAlignment="Right" />
@@ -592,18 +574,16 @@
             </Border>
           </Grid>
 
-          <!-- Clearly simulated payment step -->
+          <!-- Payment integration placeholder; no order is created here. -->
           <Grid IsVisible="{Binding IsPaymentVisible}" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="560">
             <Border Classes="surface" Padding="28">
               <StackPanel Spacing="15">
-                <Border Classes="demo-badge" HorizontalAlignment="Left"><TextBlock Text="УЧЕБНЫЙ РЕЖИМ · СПИСАНИЯ НЕТ" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource C_695A3D}"/></Border>
-                <TextBlock Text="Демо-оплата" FontSize="25" FontWeight="SemiBold"/>
-                <TextBlock Text="Это экран для демонстрации этапа покупки в курсовой. Никакие банковские данные не запрашиваются, реальный платёж не отправляется и деньги не списываются." TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource C_6D786F}" LineHeight="18"/>
+                <TextBlock Text="Оплата" FontSize="25" FontWeight="SemiBold"/>
+                <TextBlock Text="Платёжный способ пока не подключён. Корзина сохранена; интеграцию оплаты добавим следующим этапом." TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource C_6D786F}" LineHeight="18"/>
                 <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,4">
                   <StackPanel><TextBlock Text="Товаров в корзине" FontSize="11" Foreground="{DynamicResource C_778279}"/><TextBlock Text="{Binding CartCount, StringFormat='{}{0} шт.'}" FontSize="14" FontWeight="SemiBold"/></StackPanel>
                   <StackPanel Grid.Column="1" HorizontalAlignment="Right"><TextBlock Text="Сумма покупки" FontSize="11" Foreground="{DynamicResource C_778279}" HorizontalAlignment="Right"/><TextBlock Text="{Binding PaymentTotalText}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource C_234B37}"/></StackPanel>
                 </Grid>
-                <Button Classes="primary" Content="Подтвердить демо-оплату" Command="{Binding PayDemoCommand}" IsEnabled="{Binding CanCheckout}" HorizontalContentAlignment="Center"/>
                 <Button Classes="secondary" Content="Назад в корзину" Command="{Binding CancelPaymentCommand}" HorizontalAlignment="Center"/>
               </StackPanel>
             </Border>
@@ -712,7 +692,7 @@
                     <TextBlock Grid.Column="1" Text="{Binding SelectedArrivalText}" FontSize="10.5" Foreground="{DynamicResource C_778279}" VerticalAlignment="Center" />
                   </Grid>
                   <Border Background="{DynamicResource C_F5F3ED}" BorderBrush="{DynamicResource C_E9E4D9}" BorderThickness="1" CornerRadius="9" Padding="12">
-                    <TextBlock Text="Цены и остатки используются для учебной демонстрации. Оплата не списывает деньги." FontSize="10" Foreground="{DynamicResource C_716958}" TextWrapping="Wrap" />
+                    <TextBlock Text="Цена и наличие указаны для ориентира; подтвердите их перед оформлением." FontSize="10" Foreground="{DynamicResource C_716958}" TextWrapping="Wrap" />
                   </Border>
                   <Border Background="{DynamicResource C_FFFFFF}" BorderBrush="{DynamicResource C_E1E6E0}" BorderThickness="1" CornerRadius="11" Padding="14">
                     <StackPanel Spacing="10">
@@ -720,7 +700,7 @@
                         <TextBlock Text="Отзывы покупателей" FontSize="13" FontWeight="SemiBold" />
                         <TextBlock Grid.Column="1" Text="{Binding SelectedRatingSummaryText}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource C_695A3D}" VerticalAlignment="Center" />
                       </Grid>
-                      <TextBlock Text="Отзывы приведены как примерные данные DummyJSON; это не отзывы магазина." FontSize="9" Foreground="{DynamicResource C_778279}" TextWrapping="Wrap" />
+                  <TextBlock Text="Отзывы приведены как примеры и не являются отзывами покупателей магазина." FontSize="9" Foreground="{DynamicResource C_778279}" TextWrapping="Wrap" />
                       <TextBlock Text="{Binding ReviewsStatusText}" IsVisible="{Binding !HasProductReviews}" FontSize="10" Foreground="{DynamicResource C_778279}" TextWrapping="Wrap" />
                       <ItemsControl ItemsSource="{Binding ProductReviews}">
                         <ItemsControl.ItemTemplate>
@@ -742,12 +722,16 @@
                   </Border>
                 </StackPanel>
               </ScrollViewer>
-              <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="9">
-                <Button Classes="primary" Content="{Binding SelectedCartActionText}" Tag="{Binding SelectedProduct}" Click="OnAddToCartClick" IsEnabled="{Binding SelectedProduct.IsAvailable}" HorizontalContentAlignment="Center" />
-                <Button Grid.Column="2" Classes="favorite-action" Classes.liked="{Binding SelectedProduct.IsFavorite}" Tag="{Binding SelectedProduct}" Click="OnToggleFavoriteClick" ToolTip.Tip="{Binding SelectedProduct.FavoriteButtonLabel}">
+              <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                <Button Classes="primary" Content="Добавить в корзину" Tag="{Binding SelectedProduct}" Click="OnAddToCartClick" IsEnabled="{Binding SelectedProduct.IsAvailable}" HorizontalContentAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="{Binding SelectedProduct.CartQuantity, StringFormat='{}{0} в корзине'}" IsVisible="{Binding IsSelectedProductInCart}" FontSize="10" Foreground="{DynamicResource C_526C59}" VerticalAlignment="Center" />
+                <Button Grid.Column="2" Classes="icon-button" IsVisible="{Binding IsSelectedProductInCart}" Tag="{Binding SelectedProduct}" Click="OnRemoveProductFromCartClick" ToolTip.Tip="Убрать один товар из корзины">
+                  <svg:Svg Path="/Assets/Icons/minus.svg" Width="16" Height="16" />
+                </Button>
+                <Button Grid.Column="4" Classes="favorite-action" Classes.liked="{Binding SelectedProduct.IsFavorite}" Tag="{Binding SelectedProduct}" Click="OnToggleFavoriteClick" ToolTip.Tip="{Binding SelectedProduct.FavoriteButtonLabel}">
                   <svg:Svg Path="{Binding SelectedProduct.FavoriteIconPath}" Width="20" Height="20" />
                 </Button>
-                <Button Grid.Column="1" Classes="secondary" IsVisible="{Binding IsLocalProductSelected}" Command="{Binding DeleteLocalProductCommand}" ToolTip.Tip="Удалить локальный товар" Padding="11,9">
+                <Button Grid.Column="3" Classes="secondary" IsVisible="{Binding IsLocalProductSelected}" Command="{Binding DeleteLocalProductCommand}" ToolTip.Tip="Удалить локальный товар" Padding="11,9">
                   <StackPanel Orientation="Horizontal" Spacing="6"><svg:Svg Path="/Assets/Icons/trash.svg" Width="16" Height="16" /><TextBlock Text="Удалить" FontSize="11" /></StackPanel>
                 </Button>
               </Grid>
@@ -760,7 +744,7 @@
                 <StackPanel Spacing="14" MaxWidth="670" HorizontalAlignment="Left">
                   <StackPanel Spacing="4">
                     <TextBlock Text="Новая позиция" FontSize="21" FontWeight="SemiBold" LetterSpacing="-0.3" />
-                    <TextBlock Text="Добавится только в локальный учебный каталог и не перезапишется синхронизацией DummyJSON." FontSize="11" Foreground="{DynamicResource C_778279}" TextWrapping="Wrap" />
+                    <TextBlock Text="Новая позиция сохранится в каталоге отдельно от существующих товаров." FontSize="11" Foreground="{DynamicResource C_778279}" TextWrapping="Wrap" />
                   </StackPanel>
                   <StackPanel Spacing="6"><TextBlock Classes="form-label" Text="Название"/><TextBox Text="{Binding NewProductName}" PlaceholderText="Например, Беспроводные наушники"/></StackPanel>
                   <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
@@ -783,7 +767,7 @@
                   <svg:Svg Path="{Binding SelectedProductIllustrationPath}" Stretch="Uniform" />
                 </Border>
                 <TextBlock Text="Ваш локальный ассортимент" FontSize="16" FontWeight="SemiBold" />
-                <TextBlock Text="API-товары можно добавлять в корзину и избранное, но удалить из источника DummyJSON нельзя. Удаление доступно для созданных здесь позиций, если они ещё не участвовали в покупке или корзине." FontSize="11" Foreground="{DynamicResource C_6D786F}" TextWrapping="Wrap" LineHeight="16" />
+                <TextBlock Text="Удаление доступно для созданных здесь позиций, если они ещё не участвуют в корзине или истории покупок." FontSize="11" Foreground="{DynamicResource C_6D786F}" TextWrapping="Wrap" LineHeight="16" />
               </StackPanel>
             </Border>
           </Grid>
@@ -807,7 +791,7 @@
         <StackPanel Grid.Row="1" Margin="0,26,0,18" Spacing="8">
           <TextBlock Text="PreOrder Store" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource C_54715E}" />
           <TextBlock Text="Товары без лишних шагов." FontSize="30" FontWeight="SemiBold" LetterSpacing="-0.65" MaxWidth="500" TextWrapping="Wrap" />
-          <TextBlock Text="Каталог из DummyJSON, локальная корзина и демонстрационная оплата." FontSize="14" Foreground="{DynamicResource C_718076}" TextWrapping="Wrap" MaxWidth="480" />
+            <TextBlock Text="Каталог товаров, избранное и корзина." FontSize="14" Foreground="{DynamicResource C_718076}" TextWrapping="Wrap" MaxWidth="480" />
         </StackPanel>
         <Border Grid.Row="2" Background="{DynamicResource C_E9EDE8}" CornerRadius="18" ClipToBounds="True" MaxHeight="330" VerticalAlignment="Top">
           <svg:Svg Path="/Assets/Products/iphone-duo.svg" Stretch="UniformToFill" />
@@ -847,11 +831,12 @@
           <Border Background="{DynamicResource C_F5F3ED}" BorderBrush="{DynamicResource C_E9E4D9}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,4,0,0">
             <Grid ColumnDefinitions="20,*" ColumnSpacing="7">
               <svg:Svg Path="/Assets/Icons/info.svg" Width="15" Height="15" VerticalAlignment="Top" />
-              <TextBlock Grid.Column="1" Text="Это учебная офлайн-демонстрация. Пароли хранятся как salted hash в локальной SQLite; вход не проверяет почту и не синхронизируется между устройствами." FontSize="9" Foreground="{DynamicResource C_716958}" TextWrapping="Wrap" LineHeight="14" />
+              <TextBlock Grid.Column="1" Text="Пароль хранится в локальном виде с солью и хэшированием. Подтверждение почты и синхронизация между устройствами не настроены." FontSize="9" Foreground="{DynamicResource C_716958}" TextWrapping="Wrap" LineHeight="14" />
             </Grid>
           </Border>
         </StackPanel>
       </Border>
     </Grid>
+    <Canvas x:Name="FlyOverlay" IsHitTestVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ClipToBounds="False" />
   </Grid>
 </Window>

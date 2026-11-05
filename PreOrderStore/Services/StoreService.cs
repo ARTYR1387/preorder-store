@@ -85,7 +85,7 @@ public sealed class StoreService(StoreDbContext db)
         var product = await db.Products.SingleOrDefaultAsync(x => x.Id == productId, cancellationToken)
             ?? throw new PreOrderException("Товар уже удалён.");
         if (!product.IsLocalProduct)
-            throw new PreOrderException("Товары API нельзя удалить из источника. Можно удалять только добавленные вручную товары.");
+            throw new PreOrderException("Эту позицию нельзя удалить. Удалять можно только товары, добавленные вручную.");
         if (await db.PreOrders.AnyAsync(x => x.ProductId == productId, cancellationToken) ||
             await db.CartItems.AnyAsync(x => x.ProductId == productId, cancellationToken))
             throw new PreOrderException("Нельзя удалить товар, который находится в корзине или истории покупок.");
@@ -123,7 +123,23 @@ public sealed class StoreService(StoreDbContext db)
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<PreOrder>> CheckoutAsync(int customerId, bool isDemoPaid = false, CancellationToken cancellationToken = default)
+    public async Task RemoveCartItemCompletelyAsync(int customerId, int cartItemId, CancellationToken cancellationToken = default)
+    {
+        var cartItem = await db.CartItems.SingleOrDefaultAsync(x => x.Id == cartItemId && x.CustomerId == customerId, cancellationToken)
+            ?? throw new PreOrderException("Позиция уже отсутствует в корзине.");
+        db.CartItems.Remove(cartItem);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task ClearCartAsync(int customerId, CancellationToken cancellationToken = default)
+    {
+        var cartItems = await db.CartItems.Where(x => x.CustomerId == customerId).ToListAsync(cancellationToken);
+        if (cartItems.Count == 0) return;
+        db.CartItems.RemoveRange(cartItems);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<PreOrder>> CheckoutAsync(int customerId, CancellationToken cancellationToken = default)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         var cart = await db.CartItems.Include(x => x.Product).Where(x => x.CustomerId == customerId)
@@ -147,7 +163,7 @@ public sealed class StoreService(StoreDbContext db)
             UnitPriceAtOrder = item.Product.Price,
             CreatedAtUtc = DateTime.UtcNow,
             Status = PreOrderStatus.AwaitingConfirmation,
-            IsDemoPaid = isDemoPaid
+            IsDemoPaid = false
         }).ToArray();
         db.PreOrders.AddRange(orders);
         db.CartItems.RemoveRange(cart);

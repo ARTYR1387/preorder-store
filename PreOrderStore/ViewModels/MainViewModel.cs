@@ -19,7 +19,7 @@ public partial class MainViewModel : ViewModelBase
     private bool _showAuth;
     private string _authReturnSection = "Каталог";
     private string _productReturnSection = "Каталог";
-    private const int ProductPageSize = 12;
+    private const int ProductPageSize = 8;
     private List<Product> _matchingProducts = [];
     private readonly HashSet<int> _guestFavoriteProductIds = [];
     private static readonly CultureInfo RuCulture = CultureInfo.GetCultureInfo("ru-RU");
@@ -115,10 +115,12 @@ public partial class MainViewModel : ViewModelBase
     public bool HasNoOrders => PreOrders.Count == 0;
     public bool HasNoCartItems => CartItems.Count == 0;
     public bool CanCheckout => CartItems.Count > 0 && !IsBusy;
+    public bool CanClearCart => CartItems.Count > 0 && !IsBusy;
+    public bool IsSelectedProductInCart => SelectedProduct?.CartQuantity > 0;
     public string CartTotalText => FormatMoney(CartTotal);
     public string PaymentTotalText => CartTotalText;
     public string LastSyncText => LastSyncUtc is null
-        ? "Каталог загружается из DummyJSON; данные кэшируются в SQLite"
+        ? "Каталог готов к обновлению"
         : $"Локальный каталог обновлён {LastSyncUtc.Value.ToLocalTime():dd.MM.yyyy HH:mm}";
     public string SelectedPriceText => SelectedProduct is null ? string.Empty : FormatMoney(SelectedProduct.Price);
     public string SelectedArrivalText => SelectedProduct is null ? string.Empty : ArrivalLabel(SelectedProduct.ExpectedArrivalDate);
@@ -126,8 +128,8 @@ public partial class MainViewModel : ViewModelBase
         ? string.Empty
         : SelectedProduct.IsAvailable ? $"Есть в наличии: {SelectedProduct.AvailableQuantity} шт." : "Нет в наличии";
     public string SelectedCartActionText => SelectedProduct is null ? "Добавить в корзину" :
-        CartItems.FirstOrDefault(x => x.ProductId == SelectedProduct.Id) is { Quantity: > 0 } item
-            ? $"В корзине · ещё {item.Quantity} шт." : "Добавить в корзину";
+        SelectedProduct.CartQuantity > 0
+            ? $"В корзине · {SelectedProduct.CartQuantity} шт." : "Добавить в корзину";
 
     public MainViewModel(StoreService store, CatalogSyncService sync, AuthService auth)
     {
@@ -162,14 +164,22 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(CurrentThemeVariant));
     }
     partial void OnNoticeChanged(string value) => OnPropertyChanged(nameof(HasNotice));
-    partial void OnCartCountChanged(int value) => OnPropertyChanged(nameof(CanCheckout));
+    partial void OnCartCountChanged(int value)
+    {
+        OnPropertyChanged(nameof(CanCheckout));
+        OnPropertyChanged(nameof(CanClearCart));
+    }
     partial void OnCartTotalChanged(decimal value)
     {
         OnPropertyChanged(nameof(CartTotalText));
         OnPropertyChanged(nameof(PaymentTotalText));
     }
     partial void OnLastSyncUtcChanged(DateTime? value) => OnPropertyChanged(nameof(LastSyncText));
-    partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(CanCheckout));
+    partial void OnIsBusyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanCheckout));
+        OnPropertyChanged(nameof(CanClearCart));
+    }
     partial void OnSelectedProductChanged(Product? value)
     {
         OnPropertyChanged(nameof(SelectedPriceText));
@@ -179,6 +189,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasNoSelectedProduct));
         OnPropertyChanged(nameof(IsLocalProductSelected));
         OnPropertyChanged(nameof(SelectedCartActionText));
+        OnPropertyChanged(nameof(IsSelectedProductInCart));
     }
 
     public async Task InitializeAsync()
@@ -212,7 +223,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasAdditionalProductImages));
         OnPropertyChanged(nameof(HasProductReviews));
         SelectedRatingSummaryText = product.IsLocalProduct ? "Локальный товар · оценки отсутствуют" : "Оценка загружается…";
-        ReviewsStatusText = product.IsLocalProduct ? "Для локальной учебной позиции отзывы не предусмотрены." : "Загружаем отзывы из каталога…";
+        ReviewsStatusText = product.IsLocalProduct ? "Отзывы для этой позиции пока не предусмотрены." : "Загружаем отзывы…";
         CurrentSection = "Товар";
         await AnimatePageEntryAsync();
         await LoadProductDetailsAsync(product);
@@ -236,7 +247,7 @@ public partial class MainViewModel : ViewModelBase
             if (SelectedProduct?.Id != product.Id || CurrentSection != "Товар") return;
             if (details is null)
             {
-                ReviewsStatusText = "Подробности доступны только для товаров DummyJSON.";
+                ReviewsStatusText = "Дополнительные сведения пока недоступны.";
                 return;
             }
 
@@ -295,7 +306,7 @@ public partial class MainViewModel : ViewModelBase
     {
         if (!CanManageProducts) return;
         CurrentSection = "Добавить товар";
-        Notice = "Добавьте собственную учебную позицию. Каталог DummyJSON останется без изменений.";
+        Notice = "Добавьте новую позицию в каталог.";
         await AnimatePageEntryAsync();
     }
 
@@ -474,6 +485,7 @@ public partial class MainViewModel : ViewModelBase
         CartItems.Clear();
         CartCount = 0;
         CartTotal = 0;
+        UpdateProductCartQuantities();
         Email = Password = PasswordConfirmation = string.Empty;
         CurrentSection = "Каталог";
         Notice = "Вы вышли. Каталог остаётся доступен как гостю.";
@@ -487,13 +499,13 @@ public partial class MainViewModel : ViewModelBase
         _isRefreshing = true;
         IsBusy = true;
         HasError = false;
-        Notice = "Обновляем товары из DummyJSON…";
+        Notice = "Обновляем каталог…";
         try
         {
             var count = await _sync.SynchronizeAsync();
             await LoadCatalogAsync();
             LastSyncUtc = DateTime.UtcNow;
-            Notice = $"Получено и сохранено в SQLite товаров: {count}.";
+            Notice = $"Каталог обновлён: товаров {count}.";
         }
         catch (Exception ex)
         {
@@ -577,6 +589,64 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private async Task RemoveProductFromCartAsync(Product? product)
+    {
+        if (product is null) return;
+        var item = CartItems.FirstOrDefault(x => x.ProductId == product.Id);
+        if (item is not null) await RemoveFromCartAsync(item);
+    }
+
+    [RelayCommand]
+    private async Task RemoveCartItemCompletelyAsync(CartItem? item)
+    {
+        if (item is null || item.IsRemoving) return;
+        item.IsRemoving = true;
+        await Task.Delay(200);
+        try
+        {
+            if (IsAuthenticated)
+                await _store.RemoveCartItemCompletelyAsync(_auth.Session.Customer!.Id, item.Id);
+            else
+                CartItems.Remove(item);
+            await LoadCartAsync();
+            Notice = $"«{item.Product.Name}» удалён из корзины.";
+            HasError = false;
+        }
+        catch (Exception ex)
+        {
+            item.IsRemoving = false;
+            HasError = true;
+            Notice = $"Не удалось удалить позицию: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task ClearCartAsync()
+    {
+        if (!CanClearCart) return;
+        IsBusy = true;
+        foreach (var cartItem in CartItems) cartItem.IsRemoving = true;
+        await Task.Delay(200);
+        try
+        {
+            if (IsAuthenticated)
+                await _store.ClearCartAsync(_auth.Session.Customer!.Id);
+            else
+                CartItems.Clear();
+            await LoadCartAsync();
+            Notice = "Корзина полностью очищена.";
+            HasError = false;
+        }
+        catch (Exception ex)
+        {
+            foreach (var cartItem in CartItems) cartItem.IsRemoving = false;
+            HasError = true;
+            Notice = $"Не удалось очистить корзину: {ex.Message}";
+        }
+        finally { IsBusy = false; }
+    }
+
+    [RelayCommand]
     private void Checkout()
     {
         if (CartItems.Count == 0) return;
@@ -587,48 +657,18 @@ public partial class MainViewModel : ViewModelBase
             _showAuth = true;
             IsRegisterMode = true;
             NotifyAuthPanels();
-            Notice = "Войдите или создайте аккаунт, чтобы сохранить покупку и перейти к демо-оплате.";
+            Notice = "Войдите или создайте аккаунт, чтобы продолжить оформление.";
             return;
         }
         CurrentSection = "Оплата";
-        Notice = "Проверочный экран. Нажмите «Подтвердить демо-оплату» — реальные деньги не списываются.";
-    }
-
-    [RelayCommand]
-    private async Task PayDemoAsync()
-    {
-        if (!IsAuthenticated)
-        {
-            CurrentSection = "Корзина";
-            Checkout();
-            return;
-        }
-        IsBusy = true;
-        HasError = false;
-        try
-        {
-            var orders = await _store.CheckoutAsync(_auth.Session.Customer!.Id, isDemoPaid: true);
-            Notice = orders.Count == 1
-                ? $"Демо-оплата успешна. Заказ №{orders[0].Id} сохранён; деньги не списывались."
-                : $"Демо-оплата успешна. Сохранено заказов: {orders.Count}; деньги не списывались.";
-            await LoadCartAsync();
-            await LoadOrdersAsync();
-            CurrentSection = "Заказы";
-        }
-        catch (Exception ex)
-        {
-            HasError = true;
-            Notice = $"Покупку не удалось оформить: {ex.Message}";
-            CurrentSection = "Корзина";
-        }
-        finally { IsBusy = false; }
+        Notice = "Оплата пока не подключена. Ваша корзина сохранена.";
     }
 
     [RelayCommand]
     private void CancelPayment()
     {
         CurrentSection = "Корзина";
-        Notice = "Демо-оплата отменена. Корзина сохранена.";
+        Notice = "Корзина сохранена.";
     }
 
     [RelayCommand]
@@ -681,7 +721,7 @@ public partial class MainViewModel : ViewModelBase
         {
             _pendingAuthCheckout = false;
             CurrentSection = "Оплата";
-            Notice = "Корзина сохранена в аккаунте. Подтвердите учебную оплату для завершения покупки.";
+            Notice = "Корзина сохранена в аккаунте. Оплата пока не подключена.";
         }
         else
             CurrentSection = "Каталог";
@@ -702,7 +742,7 @@ public partial class MainViewModel : ViewModelBase
         CartCount = CartItems.Sum(x => x.Quantity);
         CartTotal = CartItems.Sum(x => x.Quantity * x.Product.Price);
         OnPropertyChanged(nameof(HasNoCartItems));
-        OnPropertyChanged(nameof(SelectedCartActionText));
+        UpdateProductCartQuantities();
         if (animateProductId is not null)
         {
             await Task.Delay(20);
@@ -713,6 +753,18 @@ public partial class MainViewModel : ViewModelBase
                 enteringItem.IsEntering = false;
             }
         }
+    }
+
+    private void UpdateProductCartQuantities()
+    {
+        var quantities = CartItems.GroupBy(x => x.ProductId).ToDictionary(x => x.Key, x => x.Sum(item => item.Quantity));
+        foreach (var product in Products)
+            product.CartQuantity = quantities.GetValueOrDefault(product.Id);
+        if (SelectedProduct is not null && !Products.Contains(SelectedProduct))
+            SelectedProduct.CartQuantity = quantities.GetValueOrDefault(SelectedProduct.Id);
+        OnPropertyChanged(nameof(SelectedCartActionText));
+        OnPropertyChanged(nameof(IsSelectedProductInCart));
+        OnPropertyChanged(nameof(CanClearCart));
     }
 
     private async Task LoadOrdersAsync()
@@ -745,6 +797,7 @@ public partial class MainViewModel : ViewModelBase
             item.IsFavorite = favoriteIds.Contains(item.Id);
             Products.Add(item);
         }
+        UpdateProductCartQuantities();
         if (items.Count > 0)
             LastSyncUtc = items.Max(x => x.UpdatedAtUtc);
         if (SelectedProduct is not null)
