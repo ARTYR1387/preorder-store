@@ -73,6 +73,14 @@
     </ResourceDictionary>
   </Window.Resources>
   <Window.Styles>
+    <Style Selector="views|RemoteImage">
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.32" />
+        </Transitions>
+      </Setter>
+    </Style>
     <Style Selector="TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource C_202720}" />
       <Setter Property="FontFamily" Value="Inter" />
@@ -645,19 +653,38 @@
 
           <Grid IsVisible="{Binding IsProductDetailsVisible}" Classes="page-content" Classes.page-entering="{Binding IsPageEntering}" ColumnDefinitions="1.05*,*" ColumnSpacing="20">
             <Border Grid.Column="0" Classes="surface detail-hero" Padding="20" Background="{DynamicResource C_E9EDE8}">
-              <Grid>
-                <Border Background="{DynamicResource C_F2F4F0}" CornerRadius="13" ClipToBounds="True">
-                  <Grid>
-                    <views:RemoteImage Url="{Binding SelectedProduct.ImageAssetPath}" Stretch="UniformToFill" IsVisible="{Binding !SelectedProduct.IsLocalProduct}" />
-                    <svg:Svg Path="{Binding SelectedProduct.ImageAssetPath}" Stretch="Uniform" Margin="52" IsVisible="{Binding SelectedProduct.IsLocalProduct}" />
-                  </Grid>
-                </Border>
-                <Border Classes="release-badge" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="14">
-                  <TextBlock Text="{Binding SelectedProduct.ReleaseStateDisplay}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource C_365C43}" />
-                </Border>
-                <Button Grid.Row="0" Classes="secondary" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="14" Command="{Binding BackFromProductCommand}">
-                  <StackPanel Orientation="Horizontal" Spacing="7"><svg:Svg Path="/Assets/Icons/arrow-left.svg" Width="16" Height="16"/><TextBlock Text="Назад в каталог" FontSize="11"/></StackPanel>
-                </Button>
+              <Grid RowDefinitions="*,Auto" RowSpacing="12">
+                <Grid>
+                  <Border Background="{DynamicResource C_F2F4F0}" CornerRadius="13" ClipToBounds="True">
+                    <Grid>
+                      <svg:Svg Path="/Assets/Icons/catalog.svg" Width="48" Height="48" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !SelectedProduct.IsLocalProduct}" />
+                      <svg:Svg Path="{Binding SelectedProduct.ImageAssetPath}" Stretch="Uniform" Margin="52" IsVisible="{Binding SelectedProduct.IsLocalProduct}" />
+                      <views:RemoteImage Url="{Binding SelectedImageUrl}" Stretch="UniformToFill" IsVisible="{Binding HasSelectedImage}" />
+                    </Grid>
+                  </Border>
+                  <Border Classes="release-badge" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="14">
+                    <TextBlock Text="{Binding SelectedProduct.ReleaseStateDisplay}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource C_365C43}" />
+                  </Border>
+                  <Button Classes="secondary" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="14" Command="{Binding BackFromProductCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="7"><svg:Svg Path="/Assets/Icons/arrow-left.svg" Width="16" Height="16"/><TextBlock Text="Назад в каталог" FontSize="11"/></StackPanel>
+                  </Button>
+                </Grid>
+                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" IsVisible="{Binding HasAdditionalProductImages}">
+                  <ItemsControl ItemsSource="{Binding ProductImageUrls}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="9" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Button Classes="secondary" Padding="2" Tag="{Binding}" Click="OnSelectProductImageClick">
+                          <Border Width="86" Height="66" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource C_F2F4F0}">
+                            <views:RemoteImage Url="{Binding}" Stretch="UniformToFill" />
+                          </Border>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
               </Grid>
             </Border>
             <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto" RowSpacing="16" Margin="7,6,4,4">
@@ -665,6 +692,7 @@
                 <TextBlock Text="{Binding SelectedProduct.Category}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource C_54715E}" LetterSpacing="1" />
                 <TextBlock Text="{Binding SelectedProduct.Name}" FontSize="28" FontWeight="SemiBold" LetterSpacing="-0.5" TextWrapping="Wrap" />
                 <TextBlock Text="{Binding SelectedPriceText}" FontSize="25" FontWeight="SemiBold" Foreground="{DynamicResource C_234B37}" Margin="0,4,0,0" />
+                <TextBlock Text="{Binding SelectedRatingSummaryText}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource C_695A3D}" />
                 <TextBlock Text="локальная позиция каталога" FontSize="10" Foreground="{DynamicResource C_778279}" IsVisible="{Binding IsLocalProductSelected}" />
               </StackPanel>
               <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -684,6 +712,32 @@
                   </Grid>
                   <Border Background="{DynamicResource C_F5F3ED}" BorderBrush="{DynamicResource C_E9E4D9}" BorderThickness="1" CornerRadius="9" Padding="12">
                     <TextBlock Text="Цены и остатки используются для учебной демонстрации. Оплата не списывает деньги." FontSize="10" Foreground="{DynamicResource C_716958}" TextWrapping="Wrap" />
+                  </Border>
+                  <Border Background="{DynamicResource C_FFFFFF}" BorderBrush="{DynamicResource C_E1E6E0}" BorderThickness="1" CornerRadius="11" Padding="14">
+                    <StackPanel Spacing="10">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Отзывы покупателей" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="1" Text="{Binding SelectedRatingSummaryText}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource C_695A3D}" VerticalAlignment="Center" />
+                      </Grid>
+                      <TextBlock Text="Отзывы приведены как примерные данные DummyJSON; это не отзывы магазина." FontSize="9" Foreground="{DynamicResource C_778279}" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding ReviewsStatusText}" IsVisible="{Binding !HasProductReviews}" FontSize="10" Foreground="{DynamicResource C_778279}" TextWrapping="Wrap" />
+                      <ItemsControl ItemsSource="{Binding ProductReviews}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Border Background="{DynamicResource C_F7F9F6}" CornerRadius="9" Padding="11" Margin="0,0,0,7">
+                              <StackPanel Spacing="5">
+                                <Grid ColumnDefinitions="*,Auto">
+                                  <TextBlock Text="{Binding ReviewerName}" FontSize="10.5" FontWeight="SemiBold" />
+                                  <TextBlock Grid.Column="1" Text="{Binding DateDisplay}" FontSize="9" Foreground="{DynamicResource C_778279}" />
+                                </Grid>
+                                <TextBlock Text="{Binding RatingStars}" FontSize="11" Foreground="{DynamicResource C_695A3D}" />
+                                <TextBlock Text="{Binding Comment}" FontSize="10" Foreground="{DynamicResource C_66736A}" TextWrapping="Wrap" LineHeight="15" />
+                              </StackPanel>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
                   </Border>
                 </StackPanel>
               </ScrollViewer>

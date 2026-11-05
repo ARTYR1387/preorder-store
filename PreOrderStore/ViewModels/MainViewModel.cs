@@ -27,6 +27,8 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<Product> FilteredProducts { get; } = [];
     public ObservableCollection<CartItem> CartItems { get; } = [];
     public ObservableCollection<PreOrder> PreOrders { get; } = [];
+    public ObservableCollection<string> ProductImageUrls { get; } = [];
+    public ObservableCollection<ProductReviewCard> ProductReviews { get; } = [];
     public ObservableCollection<string> Categories { get; } = ["Все категории"];
     public IReadOnlyList<string> AvailabilityOptions { get; } = ["Любой статус", "В наличии", "Нет в наличии"];
     public IReadOnlyList<string> SortOptions { get; } = ["По популярному каталогу", "По названию", "Сначала дешевле", "Сначала дороже"];
@@ -59,6 +61,10 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private string _newProductDescription = string.Empty;
     [ObservableProperty] private string _newProductImageUrl = string.Empty;
     [ObservableProperty] private string _selectedProductIllustration = "Аудио";
+    [ObservableProperty] private string? _selectedImageUrl;
+    [ObservableProperty] private string _selectedRatingSummaryText = "Оценка и отзывы загружаются при открытии товара";
+    [ObservableProperty] private string _reviewsStatusText = string.Empty;
+    [ObservableProperty] private bool _isProductDetailsLoading;
 
     public string CurrentUserName => _auth.Session.Customer?.DisplayName ?? "Гость";
     public bool IsAuthenticated => _auth.Session.IsSignedIn;
@@ -102,6 +108,9 @@ public partial class MainViewModel : ViewModelBase
     public bool CanLoadMoreProducts => FilteredProducts.Count < _matchingProducts.Count;
     public string FilteredProductsCountText => FormatProductCount(_matchingProducts.Count);
     public bool HasNoSelectedProduct => !HasSelectedProduct;
+    public bool HasSelectedImage => !string.IsNullOrWhiteSpace(SelectedImageUrl);
+    public bool HasAdditionalProductImages => ProductImageUrls.Count > 1;
+    public bool HasProductReviews => ProductReviews.Count > 0;
     public bool HasNoOrders => PreOrders.Count == 0;
     public bool HasNoCartItems => CartItems.Count == 0;
     public bool CanCheckout => CartItems.Count > 0 && !IsBusy;
@@ -194,8 +203,83 @@ public partial class MainViewModel : ViewModelBase
         if (product is null) return;
         if (CurrentSection is "Каталог" or "Избранное") _productReturnSection = CurrentSection;
         SelectedProduct = product;
+        SelectedImageUrl = product.IsLocalProduct ? null : product.ImageAssetPath;
+        ProductImageUrls.Clear();
+        ProductReviews.Clear();
+        if (SelectedImageUrl is not null) ProductImageUrls.Add(SelectedImageUrl);
+        OnPropertyChanged(nameof(HasSelectedImage));
+        OnPropertyChanged(nameof(HasAdditionalProductImages));
+        OnPropertyChanged(nameof(HasProductReviews));
+        SelectedRatingSummaryText = product.IsLocalProduct ? "Локальный товар · оценки отсутствуют" : "Оценка загружается…";
+        ReviewsStatusText = product.IsLocalProduct ? "Для локальной учебной позиции отзывы не предусмотрены." : "Загружаем отзывы из каталога…";
         CurrentSection = "Товар";
         await AnimatePageEntryAsync();
+        await LoadProductDetailsAsync(product);
+    }
+
+    [RelayCommand]
+    private void SelectProductImage(string? imageUrl)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl) || !ProductImageUrls.Contains(imageUrl)) return;
+        SelectedImageUrl = imageUrl;
+        OnPropertyChanged(nameof(HasSelectedImage));
+    }
+
+    private async Task LoadProductDetailsAsync(Product product)
+    {
+        if (product.IsLocalProduct) return;
+        IsProductDetailsLoading = true;
+        try
+        {
+            var details = await _sync.GetProductDetailsAsync(product.ExternalId);
+            if (SelectedProduct?.Id != product.Id || CurrentSection != "Товар") return;
+            if (details is null)
+            {
+                ReviewsStatusText = "Подробности доступны только для товаров DummyJSON.";
+                return;
+            }
+
+            ProductImageUrls.Clear();
+            foreach (var image in details.Images)
+                if (!ProductImageUrls.Contains(image)) ProductImageUrls.Add(image);
+            if (ProductImageUrls.Count == 0 && !string.IsNullOrWhiteSpace(product.ImageAssetPath))
+                ProductImageUrls.Add(product.ImageAssetPath);
+            if (ProductImageUrls.Count > 0)
+                SelectedImageUrl = ProductImageUrls[0];
+
+            ProductReviews.Clear();
+            foreach (var review in details.Reviews.OrderByDescending(x => x.Date).Take(12))
+            {
+                var stars = new string('★', review.Rating) + new string('☆', 5 - review.Rating);
+                ProductReviews.Add(new ProductReviewCard(
+                    review.ReviewerName,
+                    stars,
+                    review.Comment,
+                    review.Date.ToLocalTime().ToString("dd.MM.yyyy", RuCulture)));
+            }
+
+            var rating = details.Rating is { } value ? value.ToString("0.0", RuCulture) : "—";
+            var reviewWord = ProductReviews.Count % 10 == 1 && ProductReviews.Count % 100 != 11
+                ? "отзыв"
+                : ProductReviews.Count % 10 is >= 2 and <= 4 && ProductReviews.Count % 100 is not (>= 12 and <= 14)
+                    ? "отзыва"
+                    : "отзывов";
+            SelectedRatingSummaryText = $"★ {rating} из 5 · {ProductReviews.Count} {reviewWord}";
+            ReviewsStatusText = ProductReviews.Count == 0 ? "В источнике пока нет отзывов." : string.Empty;
+            OnPropertyChanged(nameof(HasSelectedImage));
+            OnPropertyChanged(nameof(HasAdditionalProductImages));
+            OnPropertyChanged(nameof(HasProductReviews));
+        }
+        catch
+        {
+            if (SelectedProduct?.Id == product.Id && CurrentSection == "Товар")
+                ReviewsStatusText = "Отзывы временно недоступны. Фото из локального кэша остаётся доступным.";
+        }
+        finally
+        {
+            if (SelectedProduct?.Id == product.Id)
+                IsProductDetailsLoading = false;
+        }
     }
 
     [RelayCommand]
@@ -761,3 +845,5 @@ public partial class MainViewModel : ViewModelBase
     }
     public static string ArrivalLabel(DateTime? date) => date is null ? "Дата поступления уточняется" : $"Поставка ожидается {date.Value:dd.MM.yyyy}";
 }
+
+public sealed record ProductReviewCard(string ReviewerName, string RatingStars, string Comment, string DateDisplay);

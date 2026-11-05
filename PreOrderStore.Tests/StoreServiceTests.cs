@@ -193,6 +193,8 @@ public sealed class StoreServiceTests
     private sealed class StaticProductProvider(IReadOnlyList<ProductFeedItem> items) : IProductProvider
     {
         public Task<IReadOnlyList<ProductFeedItem>> GetProductsAsync(CancellationToken cancellationToken = default) => Task.FromResult(items);
+        public Task<ProductDetailsFeed?> GetProductDetailsAsync(string externalId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<ProductDetailsFeed?>(null);
     }
 
     private sealed class Fixture : IAsyncDisposable

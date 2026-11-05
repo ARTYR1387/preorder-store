@@ -81,6 +81,12 @@ public partial class MainWindow : Window
             vm.OpenProductCommand.Execute(product);
     }
 
+    private void OnSelectProductImageClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { Tag: string imageUrl } && DataContext is MainViewModel vm)
+            vm.SelectProductImageCommand.Execute(imageUrl);
+    }
+
     private void OnToggleFavoriteClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Control { Tag: Product product } && DataContext is MainViewModel vm)

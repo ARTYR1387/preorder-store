@@ -7,6 +7,9 @@ namespace PreOrderStore.Services;
 
 public sealed class CatalogSyncService(StoreDbContext db, IProductProvider provider)
 {
+    public Task<ProductDetailsFeed?> GetProductDetailsAsync(string externalId, CancellationToken cancellationToken = default) =>
+        provider.GetProductDetailsAsync(externalId, cancellationToken);
+
     public async Task<int> SynchronizeAsync(CancellationToken cancellationToken = default)
     {
         var feed = await provider.GetProductsAsync(cancellationToken);

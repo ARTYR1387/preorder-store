@@ -6,6 +6,7 @@ namespace PreOrderStore.Infrastructure;
 public interface IProductProvider
 {
     Task<IReadOnlyList<ProductFeedItem>> GetProductsAsync(CancellationToken cancellationToken = default);
+    Task<ProductDetailsFeed?> GetProductDetailsAsync(string externalId, CancellationToken cancellationToken = default);
 }
 
 public sealed record ProductFeedItem(
@@ -18,6 +19,9 @@ public sealed record ProductFeedItem(
     DateTime? ExpectedArrivalDate,
     int AvailableQuantity,
     bool IsAvailable);
+
+public sealed record ProductReviewFeed(string ReviewerName, int Rating, string Comment, DateTime Date);
+public sealed record ProductDetailsFeed(IReadOnlyList<string> Images, decimal? Rating, IReadOnlyList<ProductReviewFeed> Reviews);
 
 /// <summary>Reads the public DummyJSON placeholder catalogue. The displayed RUB price uses an explicit illustrative conversion, not a live exchange rate.</summary>
 public sealed class DummyJsonProductProvider(HttpClient client) : IProductProvider
@@ -49,6 +53,37 @@ public sealed class DummyJsonProductProvider(HttpClient client) : IProductProvid
             .ToArray();
     }
 
+    public async Task<ProductDetailsFeed?> GetProductDetailsAsync(string externalId, CancellationToken cancellationToken = default)
+    {
+        if (!int.TryParse(externalId, System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out var id) || id <= 0)
+            return null;
+
+        using var response = await client.GetAsync($"products/{id}", cancellationToken);
+        response.EnsureSuccessStatusCode();
+        var product = await response.Content.ReadFromJsonAsync<ProductDetailDto>(cancellationToken: cancellationToken)
+            ?? throw new InvalidDataException("DummyJSON не вернул подробности товара.");
+
+        var images = (product.Images ?? [])
+            .Append(product.Thumbnail ?? string.Empty)
+            .Where(IsHttpsUrl)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var reviews = (product.Reviews ?? [])
+            .Where(review => review.Rating is >= 1 and <= 5 && !string.IsNullOrWhiteSpace(review.Comment))
+            .Select(review => new ProductReviewFeed(
+                string.IsNullOrWhiteSpace(review.ReviewerName) ? "Покупатель DummyJSON" : review.ReviewerName.Trim(),
+                review.Rating,
+                review.Comment!.Trim(),
+                review.Date))
+            .ToArray();
+
+        return new ProductDetailsFeed(images, product.Rating, reviews);
+    }
+
+    private static bool IsHttpsUrl(string address) =>
+        Uri.TryCreate(address, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps;
+
     private sealed class ProductEnvelope
     {
         [JsonPropertyName("products")] public List<ProductDto>? Products { get; set; }
@@ -63,5 +98,21 @@ public sealed class DummyJsonProductProvider(HttpClient client) : IProductProvid
         [JsonPropertyName("price")] public decimal? Price { get; set; }
         [JsonPropertyName("thumbnail")] public string? Thumbnail { get; set; }
         [JsonPropertyName("stock")] public int Stock { get; set; }
+    }
+
+    private sealed class ProductDetailDto
+    {
+        [JsonPropertyName("rating")] public decimal? Rating { get; set; }
+        [JsonPropertyName("images")] public List<string>? Images { get; set; }
+        [JsonPropertyName("thumbnail")] public string? Thumbnail { get; set; }
+        [JsonPropertyName("reviews")] public List<ReviewDto>? Reviews { get; set; }
+    }
+
+    private sealed class ReviewDto
+    {
+        [JsonPropertyName("rating")] public int Rating { get; set; }
+        [JsonPropertyName("comment")] public string? Comment { get; set; }
+        [JsonPropertyName("date")] public DateTime Date { get; set; }
+        [JsonPropertyName("reviewerName")] public string? ReviewerName { get; set; }
     }
 }

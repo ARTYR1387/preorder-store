@@ -24,6 +24,7 @@ public sealed class RemoteImage : Image
 
     static RemoteImage()
     {
+        Client.DefaultRequestHeaders.UserAgent.ParseAdd("PreOrderStore/1.0");
         UrlProperty.Changed.AddClassHandler<RemoteImage>((control, _) => control.StartLoading());
     }
 
@@ -33,6 +34,7 @@ public sealed class RemoteImage : Image
         _loadCancellation?.Dispose();
         _loadCancellation = new CancellationTokenSource();
         Source = null;
+        Opacity = 0;
         var url = Url;
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps) return;
         _ = LoadAsync(url!, _loadCancellation.Token);
@@ -65,11 +67,17 @@ public sealed class RemoteImage : Image
             });
             var bitmap = await task;
             cancellationToken.ThrowIfCancellationRequested();
-            if (bitmap is not null)
-                Dispatcher.UIThread.Post(() =>
-                {
-                    if (!cancellationToken.IsCancellationRequested) Source = bitmap;
-                }, DispatcherPriority.Background);
+            if (bitmap is null)
+            {
+                Cache.TryRemove(key, out _);
+                return;
+            }
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (cancellationToken.IsCancellationRequested) return;
+                Source = bitmap;
+                Opacity = 1;
+            }, DispatcherPriority.Background);
         }
         catch (OperationCanceledException)
         {
