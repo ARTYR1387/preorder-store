@@ -36,6 +36,7 @@ internal static class Program
                 services.AddScoped<AuthService>();
                 services.AddScoped<CatalogSyncService>();
                 services.AddScoped<StoreService>();
+                services.AddScoped<DemoBankPaymentService>();
                 services.AddScoped<MainViewModel>();
             })
             .Build();

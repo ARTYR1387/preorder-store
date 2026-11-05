@@ -14,6 +14,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly StoreService _store;
     private readonly CatalogSyncService _sync;
     private readonly AuthService _auth;
+    private readonly DemoBankPaymentService _demoBank;
     private bool _isRefreshing;
     private bool _pendingAuthCheckout;
     private bool _showAuth;
@@ -26,6 +27,7 @@ public partial class MainViewModel : ViewModelBase
 
     public List<Product> Products { get; } = [];
     public ObservableCollection<Product> FilteredProducts { get; } = [];
+    public ObservableCollection<CatalogProductRow> ProductRows { get; } = [];
     public ObservableCollection<CartItem> CartItems { get; } = [];
     public ObservableCollection<PreOrder> PreOrders { get; } = [];
     public ObservableCollection<string> ProductImageUrls { get; } = [];
@@ -47,6 +49,7 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private string _passwordConfirmation = string.Empty;
     [ObservableProperty] private string _notice = "";
     [ObservableProperty] private bool _isBusy;
+    [ObservableProperty] private bool _isPaymentProcessing;
     [ObservableProperty] private bool _hasError;
     [ObservableProperty] private bool _isRegisterMode;
     [ObservableProperty] private bool _isDarkTheme;
@@ -72,7 +75,7 @@ public partial class MainViewModel : ViewModelBase
     public bool IsAuthVisible => _showAuth;
     public bool IsSignInPanel => IsAuthVisible && !IsRegisterMode;
     public bool IsRegisterPanel => IsAuthVisible && IsRegisterMode;
-    public bool IsAppVisible => true;
+    public bool IsAppVisible => !IsAuthVisible;
     public bool IsCatalogVisible => CurrentSection is "Каталог" or "Избранное";
     public bool IsCartVisible => CurrentSection == "Корзина";
     public bool IsOrdersVisible => CurrentSection == "Заказы" && IsAuthenticated;
@@ -116,6 +119,7 @@ public partial class MainViewModel : ViewModelBase
     public bool HasNoCartItems => CartItems.Count == 0;
     public bool CanCheckout => CartItems.Count > 0 && !IsBusy;
     public bool CanClearCart => CartItems.Count > 0 && !IsBusy;
+    public bool CanPayWithDemoBank => IsAuthenticated && CartItems.Count > 0 && !IsPaymentProcessing;
     public bool IsSelectedProductInCart => SelectedProduct?.CartQuantity > 0;
     public string CartTotalText => FormatMoney(CartTotal);
     public string PaymentTotalText => CartTotalText;
@@ -131,11 +135,12 @@ public partial class MainViewModel : ViewModelBase
         SelectedProduct.CartQuantity > 0
             ? $"В корзине · {SelectedProduct.CartQuantity} шт." : "Добавить в корзину";
 
-    public MainViewModel(StoreService store, CatalogSyncService sync, AuthService auth)
+    public MainViewModel(StoreService store, CatalogSyncService sync, AuthService auth, DemoBankPaymentService demoBank)
     {
         _store = store;
         _sync = sync;
         _auth = auth;
+        _demoBank = demoBank;
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilters();
@@ -168,6 +173,7 @@ public partial class MainViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(CanCheckout));
         OnPropertyChanged(nameof(CanClearCart));
+        OnPropertyChanged(nameof(CanPayWithDemoBank));
     }
     partial void OnCartTotalChanged(decimal value)
     {
@@ -180,6 +186,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanCheckout));
         OnPropertyChanged(nameof(CanClearCart));
     }
+    partial void OnIsPaymentProcessingChanged(bool value) => OnPropertyChanged(nameof(CanPayWithDemoBank));
     partial void OnSelectedProductChanged(Product? value)
     {
         OnPropertyChanged(nameof(SelectedPriceText));
@@ -661,7 +668,43 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
         CurrentSection = "Оплата";
-        Notice = "Оплата пока не подключена. Ваша корзина сохранена.";
+        Notice = "Выберите Demo Bank, чтобы открыть безопасный режим оплаты.";
+    }
+
+    [RelayCommand]
+    private async Task PayWithDemoBankAsync()
+    {
+        if (!CanPayWithDemoBank || _auth.Session.Customer is null) return;
+        IsPaymentProcessing = true;
+        HasError = false;
+        var paymentId = Guid.NewGuid();
+        var orderReference = $"PS-{DateTime.UtcNow:yyMMdd}-{paymentId.ToString("N")[..8].ToUpperInvariant()}";
+        var amountMinor = checked(decimal.ToInt64(decimal.Round(CartTotal, 0, MidpointRounding.AwayFromZero) * 100m));
+        var summaryItems = CartItems.Take(5).Select(item => $"{item.Product.Name} × {item.Quantity}").ToList();
+        if (CartItems.Count > 5) summaryItems.Add($"ещё {CartItems.Count - 5} поз.");
+        Notice = "Ожидаем подтверждение в Demo Bank…";
+        try
+        {
+            var response = await _demoBank.PayAsync(paymentId, amountMinor, orderReference, string.Join(" · ", summaryItems));
+            if (!response.Approved)
+            {
+                Notice = "Операция отменена в Demo Bank. Корзина сохранена.";
+                return;
+            }
+
+            var orders = await _store.CompleteDemoBankPaymentAsync(_auth.Session.Customer.Id);
+            if (orders.Count == 0) throw new PreOrderException("В корзине не осталось товаров для оформления.");
+            await LoadCartAsync();
+            await LoadOrdersAsync();
+            CurrentSection = "Заказы";
+            Notice = $"Демо-платёж подтверждён. Заказ №{orders[0].Id} сохранён.";
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            Notice = $"Не удалось завершить Demo Bank оплату: {ex.Message} Корзина сохранена.";
+        }
+        finally { IsPaymentProcessing = false; }
     }
 
     [RelayCommand]
@@ -830,6 +873,7 @@ public partial class MainViewModel : ViewModelBase
         _matchingProducts = query.ToList();
         FilteredProducts.Clear();
         foreach (var product in _matchingProducts.Take(ProductPageSize)) FilteredProducts.Add(product);
+        RebuildProductRows();
         OnPropertyChanged(nameof(CanLoadMoreProducts));
         OnPropertyChanged(nameof(FilteredProductsCountText));
         OnPropertyChanged(nameof(HasProducts));
@@ -840,17 +884,29 @@ public partial class MainViewModel : ViewModelBase
     private void LoadMoreProducts()
     {
         if (!CanLoadMoreProducts) return;
-        foreach (var product in _matchingProducts.Skip(FilteredProducts.Count).Take(ProductPageSize))
-            FilteredProducts.Add(product);
+        var start = FilteredProducts.Count;
+        var nextPage = _matchingProducts.Skip(start).Take(ProductPageSize).ToArray();
+        foreach (var product in nextPage) FilteredProducts.Add(product);
+        for (var index = 0; index < nextPage.Length; index += 2)
+            ProductRows.Add(new CatalogProductRow(nextPage[index], index + 1 < nextPage.Length ? nextPage[index + 1] : null));
         OnPropertyChanged(nameof(CanLoadMoreProducts));
+    }
+
+    private void RebuildProductRows()
+    {
+        ProductRows.Clear();
+        for (var index = 0; index < FilteredProducts.Count; index += 2)
+            ProductRows.Add(new CatalogProductRow(FilteredProducts[index], index + 1 < FilteredProducts.Count ? FilteredProducts[index + 1] : null));
     }
 
     private void NotifyAuthPanels()
     {
         OnPropertyChanged(nameof(IsAuthVisible));
+        OnPropertyChanged(nameof(IsAppVisible));
         OnPropertyChanged(nameof(IsSignInPanel));
         OnPropertyChanged(nameof(IsRegisterPanel));
         OnPropertyChanged(nameof(IsAuthenticated));
+        OnPropertyChanged(nameof(CanPayWithDemoBank));
         OnPropertyChanged(nameof(CanManageProducts));
         OnPropertyChanged(nameof(IsLocalProductSelected));
         OnPropertyChanged(nameof(IsGuest));
@@ -902,3 +958,8 @@ public partial class MainViewModel : ViewModelBase
 }
 
 public sealed record ProductReviewCard(string ReviewerName, string RatingStars, string Comment, string DateDisplay);
+
+public sealed record CatalogProductRow(Product First, Product? Second)
+{
+    public bool HasSecond => Second is not null;
+}

@@ -70,6 +70,44 @@
       <SolidColorBrush x:Key="C_F7F9F6" Color="#F7F9F6" />
       <SolidColorBrush x:Key="C_FAFBF9" Color="#FAFBF9" />
       <SolidColorBrush x:Key="C_FFFFFF" Color="#FFFFFF" />
+      <DataTemplate x:Key="ProductCardTemplate" x:DataType="domain:Product">
+        <Border Classes="surface product-card" MaxWidth="340" Margin="0,0,0,14" Padding="12" Tag="{Binding}" Tapped="OnProductCardTapped" Cursor="Hand">
+          <StackPanel Spacing="9">
+            <Grid Height="124">
+              <Border Background="{DynamicResource C_F2F4F0}" CornerRadius="10" ClipToBounds="True">
+                <Grid>
+                  <svg:Svg Path="/Assets/Icons/catalog.svg" Width="42" Height="42" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !IsLocalProduct}" />
+                  <svg:Svg Path="{Binding ImageAssetPath}" Stretch="Uniform" IsVisible="{Binding IsLocalProduct}" Margin="18" />
+                  <views:RemoteImage Url="{Binding ImageAssetPath}" Stretch="UniformToFill" IsVisible="{Binding !IsLocalProduct}" />
+                </Grid>
+              </Border>
+              <Button Classes="photo-tap" Tag="{Binding}" Click="OnOpenProductClick" ToolTip.Tip="Открыть товар" />
+              <Button Classes="favorite-action" Classes.liked="{Binding IsFavorite}" Tag="{Binding}" Click="OnToggleFavoriteClick" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" ToolTip.Tip="{Binding FavoriteButtonLabel}">
+                <svg:Svg Path="{Binding FavoriteIconPath}" Width="19" Height="19" />
+              </Button>
+              <Border Classes="release-badge" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8">
+                <TextBlock Text="{Binding ReleaseStateDisplay}" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource C_365C43}" />
+              </Border>
+            </Grid>
+            <TextBlock Text="{Binding CategoryDisplay}" FontSize="10" FontWeight="Medium" Foreground="{DynamicResource C_7A857C}" />
+            <Button Classes="link" HorizontalContentAlignment="Left" Padding="0" Tag="{Binding}" Click="OnOpenProductClick" ToolTip.Tip="Открыть подробную страницу товара">
+              <StackPanel Spacing="3">
+                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" MaxHeight="42" />
+                <TextBlock Text="Подробнее о товаре →" FontSize="10" Foreground="{DynamicResource C_526C59}" />
+              </StackPanel>
+            </Button>
+            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center" Margin="0,2,0,0">
+              <StackPanel Spacing="2" VerticalAlignment="Center">
+                <TextBlock Text="{Binding PriceDisplay}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource C_234B37}" />
+                <TextBlock Text="{Binding ArrivalDisplay}" FontSize="9.5" Foreground="{DynamicResource C_78847A}" />
+              </StackPanel>
+              <Button Grid.Column="1" Classes="primary" Tag="{Binding}" Click="OnToggleCartClick" IsEnabled="{Binding CartActionEnabled}" Padding="9,7" ToolTip.Tip="{Binding CartActionTooltip}">
+                <svg:Svg Path="{Binding CartActionIconPath}" Width="17" Height="17" />
+              </Button>
+            </Grid>
+          </StackPanel>
+        </Border>
+      </DataTemplate>
     </ResourceDictionary>
   </Window.Resources>
   <Window.Styles>
@@ -141,6 +179,20 @@
     <Style Selector="Button.secondary:pointerover">
       <Setter Property="Background" Value="{DynamicResource C_F2F6F2}" />
       <Setter Property="BorderBrush" Value="{DynamicResource C_A7B7AA}" />
+    </Style>
+    <Style Selector="Button.bank-option">
+      <Setter Property="Background" Value="{DynamicResource C_FFFFFF}" />
+      <Setter Property="Foreground" Value="{DynamicResource C_202720}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource C_D9E0D9}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="12" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Transitions"><Transitions><BrushTransition Property="Background" Duration="0:0:0.16" /><BrushTransition Property="BorderBrush" Duration="0:0:0.16" /></Transitions></Setter>
+    </Style>
+    <Style Selector="Button.bank-option:pointerover">
+      <Setter Property="Background" Value="{DynamicResource C_F2F6F2}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource C_246247}" />
     </Style>
     <Style Selector="Button.icon-button">
       <Setter Property="Background" Value="{DynamicResource C_F6F8F5}" />
@@ -233,12 +285,12 @@
       <Setter Property="Transitions"><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" /><BrushTransition Property="Background" Duration="0:0:0.16" /></Transitions></Setter>
     </Style>
     <Style Selector="Button.favorite-action:pointerover">
-      <Setter Property="Background" Value="#FFF5F4" />
+      <Setter Property="Background" Value="{DynamicResource C_F2F6F2}" />
       <Setter Property="RenderTransform" Value="scale(1.09)" />
     </Style>
     <Style Selector="Button.favorite-action.liked">
-      <Setter Property="Background" Value="#FFF0EF" />
-      <Setter Property="BorderBrush" Value="#F0D4D1" />
+      <Setter Property="Background" Value="{DynamicResource C_E4EFE7}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource C_A7B7AA}" />
     </Style>
     <Style Selector="Button.photo-tap">
       <Setter Property="Background" Value="Transparent" />
@@ -287,7 +339,7 @@
 
   <Grid Background="{DynamicResource C_F4F5F1}">
     <!-- Store shell -->
-    <Grid IsVisible="{Binding IsAppVisible}" ColumnDefinitions="232,*">
+    <Grid IsVisible="{Binding IsAppVisible}" IsEnabled="{Binding !IsPaymentProcessing}" ColumnDefinitions="232,*">
       <Border Grid.Column="0" Background="{DynamicResource C_E9EDE8}" BorderBrush="{DynamicResource C_DCE2DC}" BorderThickness="0,0,1,0">
         <Grid RowDefinitions="Auto,*,Auto" Margin="17,22,15,16">
           <Grid ColumnDefinitions="42,*" ColumnSpacing="10" VerticalAlignment="Center">
@@ -401,60 +453,26 @@
                 <ComboBox Grid.Column="2" ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSort}" />
               </Grid>
 
-              <Grid Grid.Row="3">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                  <StackPanel>
-                  <ItemsControl ItemsSource="{Binding FilteredProducts}">
+              <Grid Grid.Row="3" RowDefinitions="*,Auto" RowSpacing="8">
+                <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                  <ItemsControl ItemsSource="{Binding ProductRows}">
                     <ItemsControl.ItemsPanel>
-                      <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                    <ItemsPanelTemplate><VirtualizingStackPanel Orientation="Vertical" /></ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
-                      <DataTemplate x:DataType="domain:Product">
-                        <Border Classes="surface product-card" Width="244" Margin="0,0,12,14" Padding="12" Tag="{Binding}" Tapped="OnProductCardTapped" Cursor="Hand">
-                          <StackPanel Spacing="9">
-                            <Grid Height="124">
-                              <Border Background="{DynamicResource C_F2F4F0}" CornerRadius="10" ClipToBounds="True">
-                                <Grid>
-                                  <svg:Svg Path="/Assets/Icons/catalog.svg" Width="42" Height="42" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !IsLocalProduct}" />
-                                  <svg:Svg Path="{Binding ImageAssetPath}" Stretch="Uniform" IsVisible="{Binding IsLocalProduct}" Margin="18" />
-                                  <views:RemoteImage Url="{Binding ImageAssetPath}" Stretch="UniformToFill" IsVisible="{Binding !IsLocalProduct}" />
-                                </Grid>
-                              </Border>
-                              <Button Classes="photo-tap" Tag="{Binding}" Click="OnOpenProductClick" ToolTip.Tip="Открыть товар" />
-                              <Button Classes="favorite-action" Classes.liked="{Binding IsFavorite}" Tag="{Binding}" Click="OnToggleFavoriteClick" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" ToolTip.Tip="{Binding FavoriteButtonLabel}">
-                                <svg:Svg Path="{Binding FavoriteIconPath}" Width="19" Height="19" />
-                              </Button>
-                              <Border Classes="release-badge" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8">
-                                <TextBlock Text="{Binding ReleaseStateDisplay}" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource C_365C43}" />
-                              </Border>
-                            </Grid>
-                            <TextBlock Text="{Binding CategoryDisplay}" FontSize="10" FontWeight="Medium" Foreground="{DynamicResource C_7A857C}" />
-                            <Button Classes="link" HorizontalContentAlignment="Left" Padding="0" Tag="{Binding}" Click="OnOpenProductClick" ToolTip.Tip="Открыть подробную страницу товара">
-                              <StackPanel Spacing="3">
-                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" MaxHeight="42" />
-                                <TextBlock Text="Подробнее о товаре →" FontSize="10" Foreground="{DynamicResource C_526C59}" />
-                              </StackPanel>
-                            </Button>
-                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center" Margin="0,2,0,0">
-                              <StackPanel Spacing="2" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding PriceDisplay}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource C_234B37}" />
-                                <TextBlock Text="{Binding ArrivalDisplay}" FontSize="9.5" Foreground="{DynamicResource C_78847A}" />
-                              </StackPanel>
-                              <Button Grid.Column="1" Classes="primary" Tag="{Binding}" Click="OnToggleCartClick" IsEnabled="{Binding CartActionEnabled}" Padding="9,7" ToolTip.Tip="{Binding CartActionTooltip}">
-                                <svg:Svg Path="{Binding CartActionIconPath}" Width="17" Height="17" />
-                              </Button>
-                            </Grid>
-                          </StackPanel>
-                        </Border>
-                      </DataTemplate>
+                    <DataTemplate x:DataType="vm:CatalogProductRow">
+                      <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <ContentControl Content="{Binding First}" ContentTemplate="{StaticResource ProductCardTemplate}" />
+                        <ContentControl Grid.Column="1" Content="{Binding Second}" ContentTemplate="{StaticResource ProductCardTemplate}" IsVisible="{Binding HasSecond}" />
+                      </Grid>
+                    </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
-                  <Button Classes="secondary" Command="{Binding LoadMoreProductsCommand}"
-                          IsVisible="{Binding CanLoadMoreProducts}" HorizontalAlignment="Center" Margin="0,12,0,22">
-                    <TextBlock Text="Показать ещё товары" />
-                  </Button>
-                  </StackPanel>
                 </ScrollViewer>
+                <Button Grid.Row="1" Classes="secondary" Command="{Binding LoadMoreProductsCommand}"
+                        IsVisible="{Binding CanLoadMoreProducts}" HorizontalAlignment="Center">
+                  <TextBlock Text="Показать ещё товары" />
+                </Button>
                 <StackPanel IsVisible="{Binding HasNoProducts}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" MaxWidth="300">
                   <svg:Svg Path="/Assets/Icons/search.svg" Width="34" Height="34" HorizontalAlignment="Center" />
                   <TextBlock Text="Ничего не найдено" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" />
@@ -562,8 +580,8 @@
             <Border Grid.Row="2" Classes="surface" Padding="16">
               <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="22">
                 <StackPanel VerticalAlignment="Center" Spacing="3">
-                  <TextBlock Text="Оплата пока не подключена" FontSize="11" FontWeight="SemiBold" />
-                  <TextBlock Text="Корзина сохранится; платёжный этап добавим отдельно." FontSize="10" Foreground="{DynamicResource C_78837A}" />
+                  <TextBlock Text="Демо-оплата через Demo Bank" FontSize="11" FontWeight="SemiBold" />
+                  <TextBlock Text="Симуляция: реальные деньги не списываются." FontSize="10" Foreground="{DynamicResource C_78837A}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
                   <TextBlock Text="Итого" FontSize="10" Foreground="{DynamicResource C_778279}" HorizontalAlignment="Right" />
@@ -574,16 +592,32 @@
             </Border>
           </Grid>
 
-          <!-- Payment integration placeholder; no order is created here. -->
+          <!-- Payment choice launches the separate Demo Bank application. -->
           <Grid IsVisible="{Binding IsPaymentVisible}" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="560">
             <Border Classes="surface" Padding="28">
               <StackPanel Spacing="15">
-                <TextBlock Text="Оплата" FontSize="25" FontWeight="SemiBold"/>
-                <TextBlock Text="Платёжный способ пока не подключён. Корзина сохранена; интеграцию оплаты добавим следующим этапом." TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource C_6D786F}" LineHeight="18"/>
+                <TextBlock Text="Выберите способ оплаты" FontSize="25" FontWeight="SemiBold"/>
+                <TextBlock Text="Доступен один способ — Demo Bank. Нажмите на него, чтобы открыть отдельное приложение и подтвердить демо-платёж." TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource C_6D786F}" LineHeight="18"/>
+                <Button Classes="bank-option" Command="{Binding PayWithDemoBankCommand}" IsEnabled="{Binding CanPayWithDemoBank}">
+                  <Grid ColumnDefinitions="52,*,Auto" ColumnSpacing="12">
+                    <Border Background="{DynamicResource C_E4EFE7}" CornerRadius="10" Width="48" Height="48" VerticalAlignment="Center">
+                      <svg:Svg Path="/Assets/Icons/demo-bank.svg" Width="28" Height="28" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                      <TextBlock Text="Demo Bank" FontSize="15" FontWeight="SemiBold" />
+                      <TextBlock Text="Отдельное приложение · только симуляция" FontSize="10" Foreground="{DynamicResource C_778279}" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="2" Text="Открыть →" FontSize="11" Foreground="{DynamicResource C_246247}" VerticalAlignment="Center" />
+                  </Grid>
+                </Button>
                 <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,4">
                   <StackPanel><TextBlock Text="Товаров в корзине" FontSize="11" Foreground="{DynamicResource C_778279}"/><TextBlock Text="{Binding CartCount, StringFormat='{}{0} шт.'}" FontSize="14" FontWeight="SemiBold"/></StackPanel>
-                  <StackPanel Grid.Column="1" HorizontalAlignment="Right"><TextBlock Text="Сумма покупки" FontSize="11" Foreground="{DynamicResource C_778279}" HorizontalAlignment="Right"/><TextBlock Text="{Binding PaymentTotalText}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource C_234B37}"/></StackPanel>
+                  <StackPanel Grid.Column="1" HorizontalAlignment="Right"><TextBlock Text="Сумма покупки" FontSize="11" Foreground="{DynamicResource C_778279}" HorizontalAlignment="Right"/><TextBlock Text="{Binding PaymentTotalText}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource C_234B37}" HorizontalAlignment="Right"/></StackPanel>
                 </Grid>
+                <Border Background="{DynamicResource C_F5F3ED}" BorderBrush="{DynamicResource C_E9E4D9}" BorderThickness="1" CornerRadius="8" Padding="10">
+                  <TextBlock Text="Демо Bank не обращается к банковским счетам и не переводит деньги. Подтверждение будет записано как демонстрационная оплата." FontSize="10" Foreground="{DynamicResource C_6F6655}" TextWrapping="Wrap" LineHeight="15" />
+                </Border>
+                <TextBlock Text="Ожидаем ответ от Demo Bank…" IsVisible="{Binding IsPaymentProcessing}" HorizontalAlignment="Center" FontSize="11" Foreground="{DynamicResource C_526C59}" />
                 <Button Classes="secondary" Content="Назад в корзину" Command="{Binding CancelPaymentCommand}" HorizontalAlignment="Center"/>
               </StackPanel>
             </Border>
@@ -783,22 +817,8 @@
     </Grid>
 
     <!-- Login and local registration -->
-    <Grid IsVisible="{Binding IsAuthVisible}" ColumnDefinitions="*,450" Margin="64,38,64,38">
-      <Grid Grid.Column="0" RowDefinitions="Auto,Auto,*" Margin="0,50,40,30">
-        <Border Background="{DynamicResource C_246247}" Width="46" Height="46" CornerRadius="12" HorizontalAlignment="Left">
-          <svg:Svg Path="/Assets/Icons/mark.svg" Width="28" Height="28" HorizontalAlignment="Center" VerticalAlignment="Center" />
-        </Border>
-        <StackPanel Grid.Row="1" Margin="0,26,0,18" Spacing="8">
-          <TextBlock Text="PreOrder Store" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource C_54715E}" />
-          <TextBlock Text="Товары без лишних шагов." FontSize="30" FontWeight="SemiBold" LetterSpacing="-0.65" MaxWidth="500" TextWrapping="Wrap" />
-            <TextBlock Text="Каталог товаров, избранное и корзина." FontSize="14" Foreground="{DynamicResource C_718076}" TextWrapping="Wrap" MaxWidth="480" />
-        </StackPanel>
-        <Border Grid.Row="2" Background="{DynamicResource C_E9EDE8}" CornerRadius="18" ClipToBounds="True" MaxHeight="330" VerticalAlignment="Top">
-          <svg:Svg Path="/Assets/Products/iphone-duo.svg" Stretch="UniformToFill" />
-        </Border>
-      </Grid>
-
-      <Border Grid.Column="1" Classes="surface" Padding="30" VerticalAlignment="Center">
+    <Grid IsVisible="{Binding IsAuthVisible}" Background="{DynamicResource C_F4F5F1}">
+      <Border Classes="surface" Padding="30" Margin="24" Width="450" MaxWidth="520" VerticalAlignment="Center" HorizontalAlignment="Center">
         <StackPanel Spacing="12">
           <TextBlock Text="АККАУНТ ДЛЯ ОФОРМЛЕНИЯ" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource C_6F7E72}" LetterSpacing="1.1" />
           <TextBlock Text="{Binding AuthTitle}" FontSize="24" FontWeight="SemiBold" LetterSpacing="-0.35" />
@@ -837,6 +857,6 @@
         </StackPanel>
       </Border>
     </Grid>
-    <Canvas x:Name="FlyOverlay" IsHitTestVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ClipToBounds="False" />
+    <Canvas x:Name="FlyOverlay" IsVisible="{Binding IsAppVisible}" IsHitTestVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ClipToBounds="False" />
   </Grid>
 </Window>

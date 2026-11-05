@@ -76,7 +76,7 @@ public sealed class StoreServiceTests
     }
 
     [Fact]
-    public async Task Checkout_CreatesPendingCustomerOrderAndClearsCartWithoutMarkingItPaid()
+    public async Task DemoBankCheckout_CreatesCustomerOrderAndClearsCartAsDemoPaid()
     {
         await using var fixture = await Fixture.CreateAsync();
         var product = await fixture.AddProduct(price: 19.95m, stock: 5);
@@ -87,14 +87,14 @@ public sealed class StoreServiceTests
         product.Price = 24.50m;
         await fixture.Db.SaveChangesAsync();
 
-        var orders = await fixture.Store.CheckoutAsync(customer.Id);
+        var orders = await fixture.Store.CompleteDemoBankPaymentAsync(customer.Id);
 
         var order = Assert.Single(orders);
         Assert.Equal(customer.Id, order.CustomerId);
         Assert.Equal(2, order.Quantity);
         Assert.Equal(24.50m, order.UnitPriceAtOrder);
         Assert.Equal(49m, order.Total);
-        Assert.False(order.IsDemoPaid);
+        Assert.True(order.IsDemoPaid);
         Assert.Empty(await fixture.Store.GetCartItemsAsync(customer.Id));
         Assert.Single(await fixture.Store.GetPreOrdersAsync(customer.Id));
     }
@@ -107,7 +107,7 @@ public sealed class StoreServiceTests
         var buyer = await fixture.AddCustomer("buyer@example.com");
         var other = await fixture.AddCustomer("other@example.com");
         await fixture.Store.AddToCartAsync(buyer.Id, product.Id);
-        var order = Assert.Single(await fixture.Store.CheckoutAsync(buyer.Id));
+        var order = Assert.Single(await fixture.Store.CompleteDemoBankPaymentAsync(buyer.Id));
 
         Assert.Empty(await fixture.Store.GetPreOrdersAsync(other.Id));
         await Assert.ThrowsAsync<PreOrderException>(() => fixture.Store.CancelPreOrderAsync(order.Id, other.Id));

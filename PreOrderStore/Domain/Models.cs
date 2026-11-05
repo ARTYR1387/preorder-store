@@ -213,7 +213,7 @@ public sealed class PreOrder
     public string TotalDisplay => Total.ToString("N0", CultureInfo.GetCultureInfo("ru-RU")) + " ₽";
 
     [NotMapped]
-    public string PaymentDisplay => "Оплата не подтверждена";
+    public string PaymentDisplay => IsDemoPaid ? "Оплачено через Demo Bank · демо" : "Оплата не подтверждена";
 }
 
 public sealed record RegistrationResult(bool Succeeded, string Message);

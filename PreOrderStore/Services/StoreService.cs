@@ -139,7 +139,7 @@ public sealed class StoreService(StoreDbContext db)
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<PreOrder>> CheckoutAsync(int customerId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PreOrder>> CompleteDemoBankPaymentAsync(int customerId, CancellationToken cancellationToken = default)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         var cart = await db.CartItems.Include(x => x.Product).Where(x => x.CustomerId == customerId)
@@ -163,7 +163,7 @@ public sealed class StoreService(StoreDbContext db)
             UnitPriceAtOrder = item.Product.Price,
             CreatedAtUtc = DateTime.UtcNow,
             Status = PreOrderStatus.AwaitingConfirmation,
-            IsDemoPaid = false
+            IsDemoPaid = true
         }).ToArray();
         db.PreOrders.AddRange(orders);
         db.CartItems.RemoveRange(cart);
