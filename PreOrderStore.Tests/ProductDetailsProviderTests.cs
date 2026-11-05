@@ -25,7 +25,7 @@ public sealed class ProductDetailsProviderTests
               ]
             }
             """;
-        using var client = new HttpClient(new JsonResponseHandler(payload))
+        using var client = new HttpClient(new JsonResponseHandler(payload, "/products/42"))
         {
             BaseAddress = new Uri("https://dummyjson.com/")
         };
@@ -45,7 +45,7 @@ public sealed class ProductDetailsProviderTests
     [Fact]
     public async Task GetProductDetails_SkipsLocalIdsWithoutAnHttpRequest()
     {
-        using var client = new HttpClient(new JsonResponseHandler("{}"))
+        using var client = new HttpClient(new JsonResponseHandler("{}", "/products/42"))
         {
             BaseAddress = new Uri("https://dummyjson.com/")
         };
@@ -56,11 +56,31 @@ public sealed class ProductDetailsProviderTests
         Assert.Null(details);
     }
 
-    private sealed class JsonResponseHandler(string json) : HttpMessageHandler
+    [Fact]
+    public async Task GetProducts_UsesEmbeddedRussianDescriptionWhenAvailable()
+    {
+        const string payload = """
+            { "products": [
+              { "id": 1, "title": "Essence Mascara Lash Princess", "description": "English description", "category": "beauty", "price": 9.99, "thumbnail": "https://cdn.example.test/maskara.webp", "stock": 5 }
+            ] }
+            """;
+        using var client = new HttpClient(new JsonResponseHandler(payload, "/products?limit=0&select=id,title,description,category,price,thumbnail,stock"))
+        {
+            BaseAddress = new Uri("https://dummyjson.com/")
+        };
+        var provider = new DummyJsonProductProvider(client);
+
+        var product = Assert.Single(await provider.GetProductsAsync());
+
+        Assert.Contains("ресниц", product.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("English description", product.Description);
+    }
+
+    private sealed class JsonResponseHandler(string json, string expectedPathAndQuery) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            Assert.EndsWith("/products/42", request.RequestUri!.AbsoluteUri);
+            Assert.Equal(expectedPathAndQuery, request.RequestUri!.PathAndQuery);
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")

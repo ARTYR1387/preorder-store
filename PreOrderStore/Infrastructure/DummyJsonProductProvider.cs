@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace PreOrderStore.Infrastructure;
@@ -29,6 +30,7 @@ public sealed class DummyJsonProductProvider(HttpClient client) : IProductProvid
     // DummyJSON prices are sample values with no currency guarantee. This fixed multiplier is only a classroom display conversion.
     public const decimal IllustrativeRubleMultiplier = 90m;
     private const string Fields = "id,title,description,category,price,thumbnail,stock";
+    private static readonly Lazy<Dictionary<string, string>> RussianDescriptions = new(LoadRussianDescriptions);
 
     public async Task<IReadOnlyList<ProductFeedItem>> GetProductsAsync(CancellationToken cancellationToken = default)
     {
@@ -40,18 +42,28 @@ public sealed class DummyJsonProductProvider(HttpClient client) : IProductProvid
 
         return payload.Products
             .Where(p => p.Id > 0 && !string.IsNullOrWhiteSpace(p.Title) && p.Price >= 0)
-            .Select(p => new ProductFeedItem(
-                p.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            .Select(p =>
+            {
+                var externalId = p.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                var description = LocalizeDescription(externalId, p.Description);
+                return new ProductFeedItem(
+                externalId,
                 p.Title!.Trim(),
-                p.Description?.Trim() ?? string.Empty,
+                description,
                 string.IsNullOrWhiteSpace(p.Category) ? "Без категории" : p.Category,
                 decimal.Round(p.Price!.Value * IllustrativeRubleMultiplier, 2, MidpointRounding.AwayFromZero),
                 string.IsNullOrWhiteSpace(p.Thumbnail) ? null : p.Thumbnail,
                 null,
                 Math.Max(0, p.Stock),
-                p.Stock > 0))
+                p.Stock > 0);
+            })
             .ToArray();
     }
+
+    public static string LocalizeDescription(string externalId, string? originalDescription) =>
+        RussianDescriptions.Value.TryGetValue(externalId, out var russianDescription)
+            ? russianDescription
+            : originalDescription?.Trim() ?? string.Empty;
 
     public async Task<ProductDetailsFeed?> GetProductDetailsAsync(string externalId, CancellationToken cancellationToken = default)
     {
@@ -83,6 +95,25 @@ public sealed class DummyJsonProductProvider(HttpClient client) : IProductProvid
 
     private static bool IsHttpsUrl(string address) =>
         Uri.TryCreate(address, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps;
+
+    private static Dictionary<string, string> LoadRussianDescriptions()
+    {
+        try
+        {
+            var path = Path.Combine(AppContext.BaseDirectory, "Assets", "Translations", "product-descriptions.ru.json");
+            if (!File.Exists(path)) return new Dictionary<string, string>(StringComparer.Ordinal);
+            using var stream = File.OpenRead(path);
+            if (stream is null) return new Dictionary<string, string>(StringComparer.Ordinal);
+            var values = JsonSerializer.Deserialize<Dictionary<string, string>>(stream);
+            return values is null
+                ? new Dictionary<string, string>(StringComparer.Ordinal)
+                : new Dictionary<string, string>(values, StringComparer.Ordinal);
+        }
+        catch (JsonException)
+        {
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+    }
 
     private sealed class ProductEnvelope
     {

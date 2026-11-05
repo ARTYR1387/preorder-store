@@ -79,6 +79,36 @@ public sealed class Product : INotifyPropertyChanged
 
     [NotMapped]
     public bool IsLocalProduct => ExternalId.StartsWith("local-", StringComparison.Ordinal);
+
+    [NotMapped]
+    public string CategoryDisplay => Category.ToLowerInvariant() switch
+    {
+        "beauty" => "Красота",
+        "fragrances" => "Парфюмерия",
+        "furniture" => "Мебель",
+        "groceries" => "Продукты",
+        "home-decoration" => "Декор для дома",
+        "kitchen-accessories" => "Аксессуары для кухни",
+        "laptops" => "Ноутбуки",
+        "mens-shirts" => "Мужские футболки",
+        "mens-shoes" => "Мужская обувь",
+        "mens-watches" => "Мужские часы",
+        "mobile-accessories" => "Аксессуары для смартфонов",
+        "motorcycle" => "Мотоциклы",
+        "skin-care" => "Уход за кожей",
+        "smartphones" => "Смартфоны",
+        "sports-accessories" => "Спортивные товары",
+        "sunglasses" => "Солнцезащитные очки",
+        "tablets" => "Планшеты",
+        "tops" => "Одежда",
+        "vehicle" => "Автомобили",
+        "womens-bags" => "Женские сумки",
+        "womens-dresses" => "Женские платья",
+        "womens-jewellery" => "Украшения",
+        "womens-shoes" => "Женская обувь",
+        "womens-watches" => "Женские часы",
+        _ => Category
+    };
 }
 
 public sealed class CartItem : INotifyPropertyChanged

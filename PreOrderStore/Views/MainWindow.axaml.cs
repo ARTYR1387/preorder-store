@@ -1,8 +1,11 @@
 using System.ComponentModel;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Avalonia.VisualTree;
 using PreOrderStore.Domain;
 using PreOrderStore.ViewModels;
 
@@ -79,6 +82,18 @@ public partial class MainWindow : Window
     {
         if (sender is Control { Tag: Product product } && DataContext is MainViewModel vm)
             vm.OpenProductCommand.Execute(product);
+    }
+
+    private void OnProductCardTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Handled || sender is not Border card || card.Tag is not Product product || DataContext is not MainViewModel vm)
+            return;
+        if (e.Source is Visual source)
+        {
+            for (var current = source; current is not null && current != card; current = current.GetVisualParent())
+                if (current is Button) return;
+        }
+        vm.OpenProductCommand.Execute(product);
     }
 
     private void OnSelectProductImageClick(object? sender, RoutedEventArgs e)

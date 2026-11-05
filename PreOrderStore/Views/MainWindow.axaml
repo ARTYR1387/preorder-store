@@ -429,13 +429,14 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="domain:Product">
-                        <Border Classes="surface product-card" Width="244" Margin="0,0,12,14" Padding="12">
+                        <Border Classes="surface product-card" Width="244" Margin="0,0,12,14" Padding="12" Tag="{Binding}" Tapped="OnProductCardTapped" Cursor="Hand">
                           <StackPanel Spacing="9">
                             <Grid Height="124">
                               <Border Background="{DynamicResource C_F2F4F0}" CornerRadius="10" ClipToBounds="True">
                                 <Grid>
                                   <svg:Svg Path="/Assets/Icons/catalog.svg" Width="42" Height="42" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !IsLocalProduct}" />
                                   <svg:Svg Path="{Binding ImageAssetPath}" Stretch="Uniform" IsVisible="{Binding IsLocalProduct}" Margin="18" />
+                                  <views:RemoteImage Url="{Binding ImageAssetPath}" Stretch="UniformToFill" IsVisible="{Binding !IsLocalProduct}" />
                                 </Grid>
                               </Border>
                               <Button Classes="photo-tap" Tag="{Binding}" Click="OnOpenProductClick" ToolTip.Tip="Открыть товар" />
@@ -446,7 +447,7 @@
                                 <TextBlock Text="{Binding ReleaseStateDisplay}" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource C_365C43}" />
                               </Border>
                             </Grid>
-                            <TextBlock Text="{Binding Category}" FontSize="10" FontWeight="Medium" Foreground="{DynamicResource C_7A857C}" />
+                            <TextBlock Text="{Binding CategoryDisplay}" FontSize="10" FontWeight="Medium" Foreground="{DynamicResource C_7A857C}" />
                             <Button Classes="link" HorizontalContentAlignment="Left" Padding="0" Tag="{Binding}" Click="OnOpenProductClick" ToolTip.Tip="Открыть подробную страницу товара">
                               <StackPanel Spacing="3">
                                 <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" MaxHeight="42" />
@@ -689,7 +690,7 @@
             </Border>
             <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto" RowSpacing="16" Margin="7,6,4,4">
               <StackPanel Spacing="6">
-                <TextBlock Text="{Binding SelectedProduct.Category}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource C_54715E}" LetterSpacing="1" />
+                <TextBlock Text="{Binding SelectedProduct.CategoryDisplay}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource C_54715E}" LetterSpacing="1" />
                 <TextBlock Text="{Binding SelectedProduct.Name}" FontSize="28" FontWeight="SemiBold" LetterSpacing="-0.5" TextWrapping="Wrap" />
                 <TextBlock Text="{Binding SelectedPriceText}" FontSize="25" FontWeight="SemiBold" Foreground="{DynamicResource C_234B37}" Margin="0,4,0,0" />
                 <TextBlock Text="{Binding SelectedRatingSummaryText}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource C_695A3D}" />
@@ -743,11 +744,11 @@
               </ScrollViewer>
               <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="9">
                 <Button Classes="primary" Content="{Binding SelectedCartActionText}" Tag="{Binding SelectedProduct}" Click="OnAddToCartClick" IsEnabled="{Binding SelectedProduct.IsAvailable}" HorizontalContentAlignment="Center" />
-                <Button Grid.Column="1" Classes="favorite-action" Classes.liked="{Binding SelectedProduct.IsFavorite}" Tag="{Binding SelectedProduct}" Click="OnToggleFavoriteClick" ToolTip.Tip="{Binding SelectedProduct.FavoriteButtonLabel}">
+                <Button Grid.Column="2" Classes="favorite-action" Classes.liked="{Binding SelectedProduct.IsFavorite}" Tag="{Binding SelectedProduct}" Click="OnToggleFavoriteClick" ToolTip.Tip="{Binding SelectedProduct.FavoriteButtonLabel}">
                   <svg:Svg Path="{Binding SelectedProduct.FavoriteIconPath}" Width="20" Height="20" />
                 </Button>
-                <Button Grid.Column="2" Classes="icon-button" IsVisible="{Binding IsLocalProductSelected}" Command="{Binding DeleteLocalProductCommand}" ToolTip.Tip="Удалить локальный товар">
-                  <svg:Svg Path="/Assets/Icons/trash.svg" Width="18" Height="18" />
+                <Button Grid.Column="1" Classes="secondary" IsVisible="{Binding IsLocalProductSelected}" Command="{Binding DeleteLocalProductCommand}" ToolTip.Tip="Удалить локальный товар" Padding="11,9">
+                  <StackPanel Orientation="Horizontal" Spacing="6"><svg:Svg Path="/Assets/Icons/trash.svg" Width="16" Height="16" /><TextBlock Text="Удалить" FontSize="11" /></StackPanel>
                 </Button>
               </Grid>
             </Grid>

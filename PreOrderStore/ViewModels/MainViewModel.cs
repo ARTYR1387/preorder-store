@@ -4,6 +4,7 @@ using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PreOrderStore.Domain;
+using PreOrderStore.Infrastructure;
 using PreOrderStore.Services;
 
 namespace PreOrderStore.ViewModels;
@@ -740,6 +741,7 @@ public partial class MainViewModel : ViewModelBase
         Products.Clear();
         foreach (var item in items)
         {
+            item.Description = DummyJsonProductProvider.LocalizeDescription(item.ExternalId, item.Description);
             item.IsFavorite = favoriteIds.Contains(item.Id);
             Products.Add(item);
         }
@@ -747,7 +749,7 @@ public partial class MainViewModel : ViewModelBase
             LastSyncUtc = items.Max(x => x.UpdatedAtUtc);
         if (SelectedProduct is not null)
             SelectedProduct = Products.FirstOrDefault(x => x.Id == SelectedProduct.Id);
-        var categories = Products.Select(x => x.Category).Distinct(StringComparer.OrdinalIgnoreCase)
+        var categories = Products.Select(x => x.CategoryDisplay).Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase).ToArray();
         Categories.Clear();
         Categories.Add("Все категории");
@@ -762,7 +764,7 @@ public partial class MainViewModel : ViewModelBase
         if (CurrentSection == "Избранное") query = query.Where(x => x.IsFavorite);
         if (!string.IsNullOrWhiteSpace(SearchText))
             query = query.Where(x => x.Name.Contains(SearchText.Trim(), StringComparison.CurrentCultureIgnoreCase));
-        if (SelectedCategory != "Все категории") query = query.Where(x => x.Category == SelectedCategory);
+        if (SelectedCategory != "Все категории") query = query.Where(x => x.CategoryDisplay == SelectedCategory);
         if (SelectedAvailability == "В наличии") query = query.Where(x => x.IsAvailable);
         else if (SelectedAvailability == "Нет в наличии") query = query.Where(x => !x.IsAvailable);
         query = SelectedSort switch
