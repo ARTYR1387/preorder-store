@@ -1,0 +1,213 @@
+@startuml
+!theme plain
+left to right direction
+skinparam backgroundColor #FFFFFF
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam classAttributeIconSize 0
+skinparam defaultFontName "DejaVu Sans"
+skinparam packageBorderColor #8BA69B
+skinparam packageBackgroundColor #F5F8F6
+skinparam classBorderColor #53796D
+skinparam classBackgroundColor #FFFFFF
+skinparam ArrowColor #4B6F63
+
+title PreOrder Store — UML архитектуры и основных классов
+
+package "PreOrder Store · UI" {
+  class MainWindow <<Avalonia View>>
+  class MainViewModel <<MVVM>> {
+    +CurrentSection : string
+    +Products : List<Product>
+    +ProductRows : ObservableCollection<CatalogProductRow>
+    +CartItems : ObservableCollection<CartItem>
+    +PreOrders : ObservableCollection<PreOrder>
+    +IsAuthenticated : bool
+    +CanManageProducts : bool
+    +CanPayWithDemoBank : bool
+    +InitializeAsync()
+    +OpenProductAsync(product)
+    +LoadMoreProducts()
+    +RegisterAsync() / SignInAsync()
+    +Checkout()
+    +PayWithDemoBankAsync()
+    +ToggleTheme()
+  }
+  class CatalogProductRow <<UI model>>
+  class ProductReviewCard <<UI model>>
+}
+
+package "PreOrder Store · Services" {
+  class AuthService {
+    +RegisterAsync(name, email, password)
+    +SignInAsync(email, password)
+  }
+  class UserSession {
+    +Customer : StoreCustomer?
+    +IsSignedIn : bool
+    +SignOut()
+  }
+  class CatalogSyncService {
+    +SynchronizeAsync() : int
+    +GetProductDetailsAsync(externalId)
+  }
+  class StoreService {
+    +GetProductsAsync()
+    +GetPreOrdersAsync(customerId)
+    +GetCartItemsAsync(customerId)
+    +GetFavoriteProductIdsAsync(customerId)
+    +SetFavoriteAsync(customerId, productId, value)
+    +AddToCartAsync(customerId, productId)
+    +RemoveFromCartAsync(customerId, cartItemId)
+    +RemoveCartItemCompletelyAsync(customerId, cartItemId)
+    +ClearCartAsync(customerId)
+    +CompleteDemoBankPaymentAsync(customerId)
+    +CancelPreOrderAsync(preOrderId, customerId)
+    +CreateLocalProductAsync(...)
+    +DeleteLocalProductAsync(productId)
+  }
+  class DemoBankPaymentService {
+    +PayAsync(paymentId, amountMinor, orderReference, itemSummary)
+    -ResolveProjectPath()
+    -TokenMatches(expected, actual)
+  }
+  class DemoBankPaymentResult {
+    +Approved : bool
+  }
+}
+
+package "PreOrder Store · Data and provider" {
+  class Program <<composition root>> {
+    +Main(args)
+    +Configure DI and SQLite
+    +Apply EF Core migrations
+  }
+  class StoreDbContext <<EF Core>> {
+    +Customers : DbSet<StoreCustomer>
+    +Products : DbSet<Product>
+    +CartItems : DbSet<CartItem>
+    +Favorites : DbSet<FavoriteItem>
+    +PreOrders : DbSet<PreOrder>
+  }
+  interface IProductProvider {
+    +GetProductsAsync()
+    +GetProductDetailsAsync(externalId)
+  }
+  class DummyJsonProductProvider {
+    +GetProductsAsync()
+    +GetProductDetailsAsync(externalId)
+    +LocalizeDescription(externalId, description)
+  }
+}
+
+package "PreOrder Store · Domain" {
+  class StoreCustomer {
+    +Id : int
+    +DisplayName : string
+    +EmailNormalized : string
+    +PasswordSalt : string
+    +PasswordHash : string
+    +IsAdmin : bool
+    +CreatedAtUtc : DateTime
+  }
+  class Product {
+    +Id : int
+    +ExternalId : string
+    +Name : string
+    +Description : string
+    +Category : string
+    +Price : decimal
+    +ImageAssetPath : string?
+    +ExpectedArrivalDate : DateTime?
+    +AvailableQuantity : int
+    +IsAvailable : bool
+    +IsDemoData : bool
+    +IsFavorite : bool <<NotMapped>>
+    +CartQuantity : int <<NotMapped>>
+  }
+  class CartItem {
+    +Id : int
+    +CustomerId : int
+    +ProductId : int
+    +Quantity : int
+  }
+  class FavoriteItem {
+    +Id : int
+    +CustomerId : int
+    +ProductId : int
+  }
+  class PreOrder {
+    +Id : int
+    +CustomerId : int?
+    +ProductId : int
+    +Quantity : int
+    +UnitPriceAtOrder : decimal
+    +CreatedAtUtc : DateTime
+    +Status : PreOrderStatus
+    +IsDemoPaid : bool
+  }
+  enum PreOrderStatus {
+    AwaitingConfirmation
+    Confirmed
+    Cancelled
+    Fulfilled
+  }
+}
+
+package "Demo Bank · separate Avalonia app" {
+  class DemoBankProgram <<process entry>> {
+    +ParseArgs(args) : LaunchData
+  }
+  class ConfirmationWindow <<Avalonia Window>> {
+    +Approve()
+    +Cancel()
+    +SendAsync(approved)
+  }
+  class LaunchData {
+    +PipeName : string
+    +Token : string
+    +PaymentId : Guid
+    +AmountMinor : long
+    +OrderReference : string
+    +ItemSummary : string
+  }
+  class PipeResponse {
+    +PaymentId : Guid
+    +Token : string
+    +AmountMinor : long
+    +Approved : bool
+  }
+}
+
+MainWindow --> MainViewModel : DataContext
+Program ..> StoreDbContext : creates and migrates
+Program ..> MainViewModel : dependency injection
+MainViewModel --> AuthService : login / registration
+MainViewModel --> UserSession : current user
+MainViewModel --> CatalogSyncService : catalog and details
+MainViewModel --> StoreService : cart / favorites / orders
+MainViewModel --> DemoBankPaymentService : checkout
+CatalogSyncService --> IProductProvider : requests data
+DummyJsonProductProvider ..|> IProductProvider
+AuthService --> StoreDbContext : reads/writes
+AuthService --> UserSession : establishes session
+StoreService --> StoreDbContext : transactional persistence
+CatalogSyncService --> StoreDbContext : cache sync
+DemoBankPaymentService ..> DemoBankProgram : starts dotnet process
+DemoBankPaymentService <..> ConfirmationWindow : named pipe + JSON
+DemoBankPaymentService ..> DemoBankPaymentResult : returns approval
+
+StoreCustomer "1" -- "0..*" CartItem : owns
+Product "1" -- "0..*" CartItem : selected as
+StoreCustomer "1" -- "0..*" FavoriteItem : saves
+Product "1" -- "0..*" FavoriteItem : favorited
+StoreCustomer "0..1" -- "0..*" PreOrder : places
+Product "1" -- "0..*" PreOrder : ordered as
+PreOrder --> PreOrderStatus
+
+note bottom of DemoBankPaymentService
+  Local simulation only: the store validates payment ID,
+  amount and a random one-time token. No real payment.
+end note
+@enduml

@@ -1,0 +1,58 @@
+%%{init: {"er": {"layoutDirection": "LR"}}}%%
+erDiagram
+    CUSTOMERS ||--o{ CART_ITEMS : owns
+    CUSTOMERS ||--o{ FAVORITES : saves
+    CUSTOMERS o|--o{ PREORDERS : places
+    PRODUCTS ||--o{ CART_ITEMS : contains
+    PRODUCTS ||--o{ FAVORITES : appears_in
+    PRODUCTS ||--o{ PREORDERS : ordered_as
+
+    CUSTOMERS {
+        INTEGER Id PK
+        TEXT DisplayName
+        TEXT EmailNormalized UK
+        TEXT PasswordSalt
+        TEXT PasswordHash
+        INTEGER IsAdmin
+        TEXT CreatedAtUtc
+    }
+
+    PRODUCTS {
+        INTEGER Id PK
+        TEXT ExternalId UK
+        TEXT Name
+        TEXT Description
+        TEXT Category
+        TEXT Price
+        TEXT ImageAssetPath
+        TEXT ExpectedArrivalDate
+        INTEGER AvailableQuantity
+        INTEGER IsAvailable
+        INTEGER IsDemoData
+        TEXT CreatedAtUtc
+        TEXT UpdatedAtUtc
+    }
+
+    CART_ITEMS {
+        INTEGER Id PK
+        INTEGER CustomerId FK
+        INTEGER ProductId FK
+        INTEGER Quantity
+    }
+
+    FAVORITES {
+        INTEGER Id PK
+        INTEGER CustomerId FK
+        INTEGER ProductId FK
+    }
+
+    PREORDERS {
+        INTEGER Id PK
+        INTEGER CustomerId FK
+        INTEGER ProductId FK
+        INTEGER Quantity
+        TEXT UnitPriceAtOrder
+        TEXT CreatedAtUtc
+        TEXT Status
+        INTEGER IsDemoPaid
+    }
